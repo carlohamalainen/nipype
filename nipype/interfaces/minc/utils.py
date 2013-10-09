@@ -12,6 +12,8 @@ Author: Carlo Hamalainen <carlo@carlo-hamalainen.net>
 
 # TODO Check exit-code behaviour of minc commands.
 
+# FIXME Instead of "traits.TraitRange(0, None)" just use traits.Int(min=0)  ?
+
 from nipype.interfaces.base import (
     TraitedSpec,
     CommandLineInputSpec,
@@ -537,3 +539,95 @@ class BlobTask(CommandLine):
         outputs = self.output_spec().get()
         outputs['output_file'] = self.inputs.output_file
         return outputs
+
+class CalcInputSpec(CommandLineInputSpec):
+    input_files = InputMultiPath(
+                    traits.File,
+                    desc='input file(s) for calculation',
+                    exists=True,
+                    mandatory=True,
+                    sep=' ', # FIXME test with files that contain spaces - does InputMultiPath do the right thing?
+                    argstr='%s',
+                    position=-2,) # FIXME test with multiple files, is order ok?
+
+
+    two = traits.Bool(desc='Produce a MINC 2.0 format output file', argstr='-2')
+
+    _xor_clobber = ('clobber', 'no_clobber')
+
+    clobber     = traits.Bool(desc='Overwrite existing file.',                  argstr='-clobber',      xor=_xor_clobber)
+    no_clobber  = traits.Bool(desc='Don\'t overwrite existing file (default).', argstr='-noclobber',    xor=_xor_clobber)
+
+    _xor_verbose = ('verbose', 'quiet',)
+
+    verbose = traits.Bool(desc='Print out log messages (default).', argstr='-verbose',  xor=_xor_verbose)
+    quiet   = traits.Bool(desc='Do not print out log messages.',    argstr='-quiet',    xor=_xor_verbose)
+
+    debug   = traits.Bool(desc='Print out debugging messages.', argstr='-debug')
+
+    # FIXME How to handle stdin option here? Not relevant?
+    filelist = traits.File(desc='Specify the name of a file containing input file names (- for stdin).', argstr='-filelist %s', mandatory=True, xor=_xor_input_files)
+
+
+
+    _xor_copy_header = ('copy_header, no_copy_header')
+
+    copy_header     = traits.Bool(desc='Copy all of the header from the first file.',            argstr='-copy_header',   xor=_xor_copy_header)
+    no_copy_header  = traits.Bool(desc='Do not copy all of the header from the first file.',  argstr='-nocopy_header', xor=_xor_copy_header)
+
+    # FIXME mincaverage seems to accept more than one of these options; I assume
+    # that it takes the last one, and it makes more sense for these to be
+    # put into an xor case.
+
+    _xor_format = ('format_filetype', 'format_byte', 'format_short',
+                   'format_int', 'format_long', 'format_float', 'format_double',
+                   'format_signed', 'format_unsigned',)
+
+    format_filetype     = traits.Bool(desc='Use data type of first file (default).',                    argstr='-filetype', xor=_xor_format)
+    format_byte         = traits.Bool(desc='Write out byte data.',                                      argstr='-byte',     xor=_xor_format)
+    format_short        = traits.Bool(desc='Write out short integer data.',                             argstr='-short',    xor=_xor_format)
+    format_int          = traits.Bool(desc='Write out 32-bit integer data.',                            argstr='-int',      xor=_xor_format)
+    format_long         = traits.Bool(desc='Superseded by -int.',                                       argstr='-long',     xor=_xor_format)
+    format_float        = traits.Bool(desc='Write out single-precision floating-point data.',           argstr='-float',    xor=_xor_format)
+    format_double       = traits.Bool(desc='Write out double-precision floating-point data.',           argstr='-double',   xor=_xor_format)
+    format_signed       = traits.Bool(desc='Write signed integer data.',                                argstr='-signed',   xor=_xor_format)
+    format_unsigned     = traits.Bool(desc='Write unsigned integer data (default if type specified).',  argstr='-unsigned', xor=_xor_format) # FIXME mark with default=?
+
+    voxel_range = traits.Tuple(
+                traits.Int, traits.Int, argstr='-range %d %d',
+                desc='Valid range for output data.',)
+
+    max_buffer_size_in_kb = traits.Trait(traits.TraitRange(0, None),
+                                desc='Specify the maximum size of the internal buffers (in kbytes).',
+                                default=0, # FIXME is this doing what I think it's doing? Write some tests.
+                                usedefault=False,
+                                argstr='-max_buffer_size_in_kb %d',)
+
+    _xor_check_dimensions = ('check_dimensions', 'no_check_dimensions',)
+
+    check_dimensions    = traits.Bool(desc='Check that files have matching dimensions (default).', argstr='-check_dimensions',     xor=_xor_check_dimensions)
+    no_check_dimensions = traits.Bool(desc='Do not check that files have matching dimensions.',                              argstr='-nocheck_dimensions',   xor=_xor_check_dimensions)
+
+    # FIXME are ignore_nan and propagate_nan mutually exclusive?
+    ignore_nan = traits.Bool(desc='Ignore invalid data (NaN) for accumulations.', argstr='-ignore_nan')
+
+    propagate_nan = traits.Bool(desc='Invalid data in any file at a voxel produces a NaN (default).', argstr='-propagate_nan')
+
+    # FIXME Double-check that these are mutually exclusive?
+    _xor_nan_zero_illegal = ('output_nan', 'output_zero', 'output_illegal_value')
+
+    output_nan      = traits.Bool(desc='Output NaN when an illegal operation is done (default).',                           argstr='-nan',              xor=_xor_nan_zero_illegal)
+    output_zero     = traits.Bool(desc='Output zero when an illegal operation is done.',                                    argstr='-zero',             xor=_xor_nan_zero_illegal)
+    output_illegal  = traits.Bool(desc='Value to write out when an illegal operation is done. Default value: 1.79769e+308', argstr='-illegal_value',    xor=_xor_nan_zero_illegal)
+
+    _xor_expression = ('expression', 'expfile')
+
+    expression = traits.Str(desc='Expression to use in calculations.',    argstr='-expression', xor=_xor_expression)
+    expfile    = traits.File(desc='Name of file containing expression.',  argstr='-expfile',    xor=_xor_expression)
+
+    # FIXME test this one, the argstr will probably need tweaking, see _format_arg.
+    outfiles = traits.List(
+                traits.Tuple(traits.Str, traits.File, argstr='-outfile %s %s',
+                desc='List of (symbol, file) tuples indicating that output should be written to the specified file, taking values from the symbol which should be created in the expression (see the EXAMPLES section). If this option is given, then all non-option arguments are taken as input files. This option can be used multiple times for multiple output files.'))
+
+    eval_width = traits.Int(200, desc='Number of voxels to evaluate simultaneously.', argstr='-eval_width %s', usedefault=True)
