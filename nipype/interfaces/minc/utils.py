@@ -12,6 +12,9 @@ Author: Carlo Hamalainen <carlo@carlo-hamalainen.net>
 
 # TODO Check exit-code behaviour of minc commands.
 
+# FIXME double-check behaviour of usedefault=True on ranges with values specified, and also int traits. Don't want
+# command line options to be specified if the user doesn't set the value.
+
 from nipype.interfaces.base import (
     TraitedSpec,
     CommandLineInputSpec,
@@ -144,7 +147,7 @@ class ConvertInputSpec(CommandLineInputSpec):
     chunk = traits.Range(low=0,
                         desc='Set the target block size for chunking (0 default, >1 block size).',
                         value=0,
-                        usedefault=True,
+                        usedefault=False,
                         argstr='-chunk %d',)
 
 class ConvertOutputSpec(TraitedSpec):
@@ -201,7 +204,7 @@ class CopyInputSpec(CommandLineInputSpec):
     real_values = traits.Bool(
                 desc='Copy real pixel intensities (default).',
                 argstr='-real_values',
-                usedefault=True,)
+                usedefault=False,)
 
 class CopyOutputSpec(TraitedSpec):
     # FIXME Am I defining the output spec correctly?
@@ -337,7 +340,7 @@ class DumpInputSpec(StdOutCommandLineInputSpec):
     line_length = traits.Range(low=0,
                         desc='Line length maximum in data section (default 80)',
                         value=0,
-                        usedefault=True,
+                        usedefault=False,
                         argstr='-l %d',)
 
     netcdf_name = traits.Str(
@@ -447,7 +450,7 @@ class AverageInputSpec(CommandLineInputSpec):
                                 low=0,
                                 desc='Specify the maximum size of the internal buffers (in kbytes).',
                                 value=4096,
-                                usedefault=True,
+                                usedefault=False,
                                 argstr='-max_buffer_size_in_kb %d',)
 
     _xor_normalize = ('normalize', 'nonormalize',)
@@ -540,6 +543,8 @@ class BlobTask(CommandLine):
         return outputs
 
 class CalcInputSpec(CommandLineInputSpec):
+    _xor_input_files = ('input_files', 'filelist')
+
     input_files = InputMultiPath(
                     traits.File,
                     desc='input file(s) for calculation',
@@ -566,8 +571,6 @@ class CalcInputSpec(CommandLineInputSpec):
 
     # FIXME How to handle stdin option here? Not relevant?
     filelist = traits.File(desc='Specify the name of a file containing input file names (- for stdin).', argstr='-filelist %s', mandatory=True, xor=_xor_input_files)
-
-
 
     _xor_copy_header = ('copy_header, no_copy_header')
 
@@ -600,7 +603,7 @@ class CalcInputSpec(CommandLineInputSpec):
                                 low = 0,
                                 desc='Specify the maximum size of the internal buffers (in kbytes).',
                                 value=0,
-                                usedefault=True,
+                                usedefault=False,
                                 argstr='-max_buffer_size_in_kb %d',)
 
     _xor_check_dimensions = ('check_dimensions', 'no_check_dimensions',)
@@ -622,12 +625,31 @@ class CalcInputSpec(CommandLineInputSpec):
 
     _xor_expression = ('expression', 'expfile')
 
-    expression = traits.Str(desc='Expression to use in calculations.',    argstr='-expression', xor=_xor_expression)
-    expfile    = traits.File(desc='Name of file containing expression.',  argstr='-expfile',    xor=_xor_expression)
+    expression = traits.Str(desc='Expression to use in calculations.',    argstr='-expression %s', xor=_xor_expression, mandatory=True)
+    expfile    = traits.File(desc='Name of file containing expression.',  argstr='-expfile %s',    xor=_xor_expression, mandatory=True)
 
     # FIXME test this one, the argstr will probably need tweaking, see _format_arg.
     outfiles = traits.List(
                 traits.Tuple(traits.Str, traits.File, argstr='-outfile %s %s',
                 desc='List of (symbol, file) tuples indicating that output should be written to the specified file, taking values from the symbol which should be created in the expression (see the EXAMPLES section). If this option is given, then all non-option arguments are taken as input files. This option can be used multiple times for multiple output files.'))
 
-    eval_width = traits.Int(200, desc='Number of voxels to evaluate simultaneously.', argstr='-eval_width %s', usedefault=True)
+    eval_width = traits.Int(200, desc='Number of voxels to evaluate simultaneously.', argstr='-eval_width %s', usedefault=False)
+
+
+class CalcOutputSpec(TraitedSpec):
+    # FIXME Am I defining the output spec correctly?
+    output_file = File(
+                    desc='output file',
+                    exists=True,)
+
+class CalcTask(CommandLine):
+    input_spec  = CalcInputSpec
+    output_spec = CalcOutputSpec
+    cmd = 'minccalc'
+
+    def _list_outputs(self):
+        # FIXME seems generic, is this necessary?
+        outputs = self.output_spec().get()
+        outputs['output_file'] = self.inputs.output_file
+        return outputs
+

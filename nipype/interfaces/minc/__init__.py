@@ -8,4 +8,4 @@ Top-level namespace for minc.
 
 from .base import (Info, check_minc, no_minc)
 from .utils import (ToRawTask, ConvertTask, CopyTask,
-                    ToEcatTask, DumpTask, AverageTask)
+                    ToEcatTask, DumpTask, AverageTask, CalcTask)
