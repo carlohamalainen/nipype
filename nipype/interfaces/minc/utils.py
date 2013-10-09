@@ -12,8 +12,6 @@ Author: Carlo Hamalainen <carlo@carlo-hamalainen.net>
 
 # TODO Check exit-code behaviour of minc commands.
 
-# FIXME Instead of "traits.TraitRange(0, None)" just use traits.Int(min=0)  ?
-
 from nipype.interfaces.base import (
     TraitedSpec,
     CommandLineInputSpec,
@@ -143,10 +141,10 @@ class ConvertInputSpec(CommandLineInputSpec):
                             argstr='-compress %s',
                             desc='Set the compression level, from 0 (disabled) to 9 (maximum).',)
 
-    chunk = traits.Trait(traits.TraitRange(0, None),
+    chunk = traits.Range(low=0,
                         desc='Set the target block size for chunking (0 default, >1 block size).',
-                        default=0,
-                        usedefault=False,
+                        value=0,
+                        usedefault=True,
                         argstr='-chunk %d',)
 
 class ConvertOutputSpec(TraitedSpec):
@@ -336,10 +334,10 @@ class DumpInputSpec(StdOutCommandLineInputSpec):
                             sep=',',
                             argstr='-v %s',)
 
-    line_length = traits.Trait(traits.TraitRange(0, None),
+    line_length = traits.Range(low=0,
                         desc='Line length maximum in data section (default 80)',
-                        default=0,
-                        usedefault=False,
+                        value=0,
+                        usedefault=True,
                         argstr='-l %d',)
 
     netcdf_name = traits.Str(
@@ -445,10 +443,11 @@ class AverageInputSpec(CommandLineInputSpec):
     format_unsigned     = traits.Bool(desc='Write unsigned integer data (default if type specified).',  argstr='-unsigned', xor=_xor_format) # FIXME mark with default=?
 
 
-    max_buffer_size_in_kb = traits.Trait(traits.TraitRange(0, None),
+    max_buffer_size_in_kb = traits.Range(
+                                low=0,
                                 desc='Specify the maximum size of the internal buffers (in kbytes).',
-                                default=4096, # FIXME is this doing what I think it's doing? Write some tests.
-                                usedefault=False,
+                                value=4096,
+                                usedefault=True,
                                 argstr='-max_buffer_size_in_kb %d',)
 
     _xor_normalize = ('normalize', 'nonormalize',)
@@ -457,7 +456,7 @@ class AverageInputSpec(CommandLineInputSpec):
 
     voxel_range = traits.Tuple(
                 traits.Int, traits.Int, argstr='-range %d %d',
-                desc='Valid range for output data.',)
+                desc='Valid range for output data.',) # FIXME ensure min <= max??? Ditto for other range parameters.
 
     sdfile = traits.File(
                 desc='Specify an output sd file (default=none).',
@@ -597,10 +596,11 @@ class CalcInputSpec(CommandLineInputSpec):
                 traits.Int, traits.Int, argstr='-range %d %d',
                 desc='Valid range for output data.',)
 
-    max_buffer_size_in_kb = traits.Trait(traits.TraitRange(0, None),
+    max_buffer_size_in_kb = traits.Range(
+                                low = 0,
                                 desc='Specify the maximum size of the internal buffers (in kbytes).',
-                                default=0, # FIXME is this doing what I think it's doing? Write some tests.
-                                usedefault=False,
+                                value=0,
+                                usedefault=True,
                                 argstr='-max_buffer_size_in_kb %d',)
 
     _xor_check_dimensions = ('check_dimensions', 'no_check_dimensions',)
