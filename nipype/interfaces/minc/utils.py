@@ -497,3 +497,41 @@ class AverageTask(CommandLine):
         outputs = self.output_spec().get()
         outputs['output_file'] = self.inputs.output_file
         return outputs
+
+class BlobInputSpec(CommandLineInputSpec):
+    input_file = File(
+                    desc='input file to blob',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-2,)
+
+    output_file = File(
+                    desc='output file',
+                    mandatory=True,
+                    genfile=False,
+                    argstr='%s',
+                    position=-1,)
+
+    trace       = traits.Bool(desc='compute the trace (approximate growth and shrinkage) -- FAST',  argstr='-trace')
+    determinant = traits.Bool(desc='compute the determinant (exact growth and shrinkage) -- SLOW',  argstr='-determinant')
+    translation = traits.Bool(desc='compute translation (structure displacement)',                  argstr='-translation')
+    magnitude   = traits.Bool(desc='compute the magnitude of the displacement vector',              argstr='-magnitude')
+
+class BlobOutputSpec(TraitedSpec):
+    # FIXME Am I defining the output spec correctly?
+    output_file = File(
+                    desc='output file',
+                    exists=True,)
+
+class BlobTask(CommandLine):
+    input_spec  = BlobInputSpec
+    output_spec = BlobOutputSpec
+    cmd = 'mincblob'
+
+    def _list_outputs(self):
+        # FIXME seems generic, is this necessary?
+        outputs = self.output_spec().get()
+        outputs['output_file'] = self.inputs.output_file
+        return outputs
+
