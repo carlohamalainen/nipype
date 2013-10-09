@@ -382,6 +382,8 @@ class DumpTask(StdOutCommandLine):
         return os.path.splitext(self.inputs.input_file)[0] + '.txt'
 
 class AverageInputSpec(CommandLineInputSpec):
+    _xor_input_files = ('input_files', 'filelist')
+
     input_files = InputMultiPath(
                     traits.File,
                     desc='input file(s) for averaging',
@@ -389,7 +391,8 @@ class AverageInputSpec(CommandLineInputSpec):
                     mandatory=True,
                     sep=' ', # FIXME test with files that contain spaces - does InputMultiPath do the right thing?
                     argstr='%s',
-                    position=-2,) # FIXME test with multiple files, is order ok?
+                    position=-2, # FIXME test with multiple files, is order ok?
+                    xor=_xor_input_files) # FIXME test this xor
 
     output_file = File(
                     desc='output file',
@@ -413,7 +416,7 @@ class AverageInputSpec(CommandLineInputSpec):
     debug   = traits.Bool(desc='Print out debugging messages.', argstr='-debug')
 
     # FIXME How to handle stdin option here? Not relevant?
-    foo = traits.File(desc='Specify the name of a file containing input file names (- for stdin).', argstr='-filelist %s',)
+    filelist = traits.File(desc='Specify the name of a file containing input file names (- for stdin).', argstr='-filelist %s', mandatory=True, xor=_xor_input_files)
 
     _xor_check_dimensions = ('check_dimensions', 'no_check_dimensions',)
 
@@ -534,4 +537,3 @@ class BlobTask(CommandLine):
         outputs = self.output_spec().get()
         outputs['output_file'] = self.inputs.output_file
         return outputs
-
