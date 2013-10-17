@@ -24,6 +24,7 @@ from nipype.interfaces.base import (
     File,
     InputMultiPath,
     traits,
+    isdefined,
 )
 
 import os
@@ -44,13 +45,17 @@ class ExtractInputSpec(StdOutCommandLineInputSpec):
                     argstr='%s',
                     position=-2,)
 
+    output_file = File(
+                    desc='output file',
+                    position=-1)
+
     _xor_write = ('write_ascii', 'write_ascii', 'write_byte',
                   'write_short', 'write_int', 'write_long',
                   'write_float', 'write_double', 'write_signed',
                   'write_unsigned',)
 
     write_ascii = traits.Bool(
-                desc-'Write out data as ascii strings (default)',
+                desc='Write out data as ascii strings (default)',
                 argstr='-ascii',
                 xor=_xor_write)
 
@@ -105,15 +110,12 @@ class ExtractInputSpec(StdOutCommandLineInputSpec):
     normalize = traits.Bool(
                     desc='Normalize integer pixel values to file max and min',
                     argstr='-normalize',
-                    xor=_xor_normalize,
-                    mandatory=True)
+                    xor=_xor_normalize)
 
     nonormalize = traits.Bool(
                     desc='Turn off pixel normalization',
                     argstr='-nonormalize',
-                    xor=_xor_normalize,
-                    mandatory=True)
-
+                    xor=_xor_normalize)
 
     image_range = traits.Tuple(
                     traits.Float, traits.Float,
@@ -183,7 +185,13 @@ class ExtractTask(StdOutCommandLine):
         """
         Extract foo.mnc to foo.raw.
         """
-        return os.path.splitext(self.inputs.input_file)[0] + '.raw'
+
+        output_file = self.inputs.output_file
+
+        if isdefined(output_file):
+            return output_file
+        else:
+            return os.path.splitext(self.inputs.input_file)[0] + '.raw'
 
 class ToRawInputSpec(StdOutCommandLineInputSpec):
     """
@@ -242,14 +250,12 @@ class ToRawInputSpec(StdOutCommandLineInputSpec):
     normalize = traits.Bool(
                     desc='Normalize integer pixel values to file max and min',
                     argstr='-normalize',
-                    xor=_xor_normalize,
-                    mandatory=True)
+                    xor=_xor_normalize)
 
     nonormalize = traits.Bool(
                     desc='Turn off pixel normalization',
                     argstr='-nonormalize',
-                    xor=_xor_normalize,
-                    mandatory=True)
+                    xor=_xor_normalize)
 
 class ToRawOutputSpec(TraitedSpec):
     # FIXME Not sure if I'm defining the outout specs correctly.
@@ -265,6 +271,7 @@ class ToRawTask(StdOutCommandLine):
     cmd = 'minctoraw'
 
     def _gen_outfilename(self):
+        # FIXME check isdefined as in the Extract code.
         """
         Convert foo.mnc to foo.raw.
         """
@@ -546,6 +553,7 @@ class DumpTask(StdOutCommandLine):
     # FIXME Are we forced to send outout to a file? Can we pipe it
     # to another minc command directly?
     def _gen_outfilename(self):
+        # FIXME allow user to specify an output file as in the Extract task.
         """
         Dump foo.mnc to foo.txt.
         """
