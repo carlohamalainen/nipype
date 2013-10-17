@@ -32,6 +32,159 @@ import warnings
 warn = warnings.warn
 warnings.filterwarnings('always', category=UserWarning)
 
+class ExtractInputSpec(StdOutCommandLineInputSpec):
+    """
+    For the MINC command mincextract.
+    """
+
+    input_file = File(
+                    desc='input file',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-2,)
+
+    _xor_write = ('write_ascii', 'write_ascii', 'write_byte',
+                  'write_short', 'write_int', 'write_long',
+                  'write_float', 'write_double', 'write_signed',
+                  'write_unsigned',)
+
+    write_ascii = traits.Bool(
+                desc-'Write out data as ascii strings (default)',
+                argstr='-ascii',
+                xor=_xor_write)
+
+    write_byte = traits.Bool(
+                desc='Write out data as bytes',
+                argstr='-byte',
+                xor=_xor_write)
+
+    write_short = traits.Bool(
+                desc='Write out data as short integers',
+                argstr='-short',
+                xor=_xor_write)
+
+    write_int = traits.Bool(
+                desc='Write out data as 32-bit integers',
+                argstr='-int',
+                xor=_xor_write)
+
+    write_long = traits.Bool(
+                desc='Superseded by -int',
+                argstr='-long',
+                xor=_xor_write)
+
+    write_float = traits.Bool(
+                desc='Write out data as single precision floating-point values',
+                argstr='-float',
+                xor=_xor_write)
+
+    write_double = traits.Bool(
+                desc='Write out data as double precision floating-point values',
+                argstr='-double',
+                xor=_xor_write)
+
+    _xor_signed = ('write_signed', 'write_unsigned')
+
+    write_signed = traits.Bool(
+                desc='Write out signed data',
+                argstr='-signed',
+                xor=_xor_signed)
+
+    write_unsigned = traits.Bool(
+                desc='Write out unsigned data',
+                argstr='-unsigned',
+                xor=_xor_signed)
+
+    write_range = traits.Tuple(
+                traits.Float, traits.Float, argstr='-range %s %s',
+                desc='Specify the range of output values\nDefault value: 1.79769e+308 1.79769e+308',)
+
+    _xor_normalize = ('normalize', 'nonormalize',)
+
+    normalize = traits.Bool(
+                    desc='Normalize integer pixel values to file max and min',
+                    argstr='-normalize',
+                    xor=_xor_normalize,
+                    mandatory=True)
+
+    nonormalize = traits.Bool(
+                    desc='Turn off pixel normalization',
+                    argstr='-nonormalize',
+                    xor=_xor_normalize,
+                    mandatory=True)
+
+
+    image_range = traits.Tuple(
+                    traits.Float, traits.Float,
+                    desc='Specify the range of real image values for normalization',
+                    argstr='-image_range %s %s')
+
+    image_minimum = traits.Float(
+                    desc='Specify the minimum real image value for normalization. Default value: 1.79769e+308',
+                    argstr='-image_minimum %s')
+
+    image_maximum = traits.Float(
+                    desc='Specify the maximum real image value for normalization. Default value: 1.79769e+308',
+                    argstr='-image_maximum %s')
+
+    start = InputMultiPath(
+                    traits.Int,
+                    desc='Specifies corner of hyperslab (C conventions for indices)',
+                    sep=',',
+                    argstr='-start %s',)
+
+    count = InputMultiPath(
+                    traits.Int,
+                    desc='Specifies edge lengths of hyperslab to read',
+                    sep=',',
+                    argstr='-count %s',)
+
+    # FIXME make sure that len(start) == len(count)?
+
+    _xor_flip = ('flip_positive_direction', 'flip_negative_direction', 'flip_any_direction')
+
+    flip_positive_direction = traits.Bool(desc='Flip images to always have positive direction.', argstr='-positive_direction', xor=_xor_flip)
+    flip_negative_direction = traits.Bool(desc='Flip images to always have negative direction.', argstr='-negative_direction', xor=_xor_flip)
+    flip_any_direction      = traits.Bool(desc='Do not flip images (Default).',                  argstr='-any_direction',      xor=_xor_flip)
+
+    _xor_x_flip = ('flip_x_positive', 'flip_x_negative', 'flip_x_any')
+
+    flip_x_positive = traits.Bool(desc='Flip images to give positive xspace:step value (left-to-right).', argstr='+xdirection',    xor=_xor_x_flip)
+    flip_x_negative = traits.Bool(desc='Flip images to give negative xspace:step value (right-to-left).', argstr='-xdirection',    xor=_xor_x_flip)
+    flip_x_any      = traits.Bool(desc='Don\'t flip images along x-axis (default).',                      argstr='-xanydirection', xor=_xor_x_flip)
+
+    _xor_y_flip = ('flip_y_positive', 'flip_y_negative', 'flip_y_any')
+
+    flip_y_positive = traits.Bool(desc='Flip images to give positive yspace:step value (post-to-ant).',   argstr='+ydirection',    xor=_xor_y_flip)
+    flip_y_negative = traits.Bool(desc='Flip images to give negative yspace:step value (ant-to-post).',   argstr='-ydirection',    xor=_xor_y_flip)
+    flip_y_any      = traits.Bool(desc='Don\'t flip images along y-axis (default).',                      argstr='-yanydirection', xor=_xor_y_flip)
+
+    _xor_z_flip = ('flip_z_positive', 'flip_z_negative', 'flip_z_any')
+
+    flip_z_positive = traits.Bool(desc='Flip images to give positive zspace:step value (inf-to-sup).',  argstr='+zdirection',       xor=_xor_z_flip)
+    flip_z_negative = traits.Bool(desc='Flip images to give negative zspace:step value (sup-to-inf).',  argstr='-zdirection',       xor=_xor_z_flip)
+    flip_z_any      = traits.Bool(desc='Don\'t flip images along z-axis (default).',                    argstr='-zanydirection',    xor=_xor_z_flip)
+
+class ExtractOutputSpec(TraitedSpec):
+    # FIXME Not sure if I'm defining the outout specs correctly.
+
+    output_file = File(
+                    desc='output file',
+                    exists=True,
+                    genfile=True,)
+
+class ExtractTask(StdOutCommandLine):
+    input_spec  = ExtractInputSpec
+    output_spec = ExtractOutputSpec
+    cmd = 'mincextract'
+
+    def _gen_outfilename(self):
+        """
+        Extract foo.mnc to foo.raw.
+        """
+        return os.path.splitext(self.inputs.input_file)[0] + '.raw'
+
 class ToRawInputSpec(StdOutCommandLineInputSpec):
     """
     For the MINC command minctoraw.
@@ -43,6 +196,8 @@ class ToRawInputSpec(StdOutCommandLineInputSpec):
                     mandatory=True,
                     argstr='%s',
                     position=-2,)
+
+    # FIXME xor on the write_ options
 
     write_byte = traits.Bool(
                 desc='Write out data as bytes',
@@ -67,6 +222,8 @@ class ToRawInputSpec(StdOutCommandLineInputSpec):
     write_double = traits.Bool(
                 desc='Write out data as double precision floating-point values',
                 argstr='-double',)
+
+    # FIXME xor option on signed/unsigned?
 
     write_signed = traits.Bool(
                 desc='Write out signed data',
@@ -362,6 +519,16 @@ class DumpOutputSpec(TraitedSpec):
                     genfile=True,)
 
 class DumpTask(StdOutCommandLine):
+    """
+    >>> from os.path import splitext
+    >>> from nipype.testing import example_data
+    >>> input_file = example_data('minc/minc_test_2D_01.mnc')
+    >>> output_file = splitext(input_file)[0] + '.txt'
+    >>> toraw = DumpTask(input_file=input_file)
+    >>> toraw.cmdline == 'mincdump %s > %s' % (input_file, output_file,)
+    True
+    """
+
     input_spec  = DumpInputSpec
     output_spec = DumpOutputSpec
     cmd = 'mincdump'
@@ -418,8 +585,8 @@ class AverageInputSpec(CommandLineInputSpec):
 
     debug   = traits.Bool(desc='Print out debugging messages.', argstr='-debug')
 
-    # FIXME How to handle stdin option here? Not relevant?
-    filelist = traits.File(desc='Specify the name of a file containing input file names (- for stdin).', argstr='-filelist %s', mandatory=True, xor=_xor_input_files)
+    # FIXME How to handle stdin option ('-') here? Not relevant?
+    filelist = traits.File(desc='Specify the name of a file containing input file names.', argstr='-filelist %s', mandatory=True, xor=_xor_input_files)
 
     _xor_check_dimensions = ('check_dimensions', 'no_check_dimensions',)
 
