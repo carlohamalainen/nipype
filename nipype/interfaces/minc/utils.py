@@ -385,21 +385,6 @@ class ConvertTask(CommandLine):
         return outputs
 
 class CopyInputSpec(CommandLineInputSpec):
-    """
-    Implement minccopy? Its man page says:
-
-        NOTE: This program is intended primarily for use with scripts such
-        as mincedit.  It does not follow the typical design rules of most MINC
-        command-line tools and therefore should be  used only with caution.
-
-    It doesn't run on a standard MNC file, e.g.
-
-        $ minccopy /home/carlo/tmp/foo.mnc /tmp/foo_copy.mnc
-        (from miopen): Can't write compressed file
-        ncvarid: ncid -1: NetCDF: Not a valid ID
-
-    """
-
     input_file = File(
                     desc='input file to copy',
                     exists=True,
@@ -410,32 +395,41 @@ class CopyInputSpec(CommandLineInputSpec):
     output_file = File(
                     desc='output file',
                     mandatory=True,
-                    genfile=False,
                     argstr='%s',
                     position=-1,)
 
+    _xor_pixel = ('pixel_values', 'real_values')
+
     pixel_values = traits.Bool(
                 desc='Copy pixel values as is.',
-                argstr='-pixel_values',)
+                argstr='-pixel_values',
+                xor=_xor_pixel)
 
     real_values = traits.Bool(
                 desc='Copy real pixel intensities (default).',
                 argstr='-real_values',
-                usedefault=False,)
+                xor=_xor_pixel)
 
 class CopyOutputSpec(TraitedSpec):
-    # FIXME Am I defining the output spec correctly?
-    output_file = File(
-                    desc='output file',
-                    exists=True,)
+    output_file = File(desc='output file', exists=True)
 
 class CopyTask(CommandLine):
+    """
+    Copy image values from one MINC file to another. Both the input
+    and output files must exist, and the images in both files must
+    have an equal number dimensions and equal dimension lengths.
+
+    NOTE: This program is intended primarily for use with scripts
+    such as mincedit. It does not follow the typical design rules of
+    most MINC command-line tools and therefore should be used only
+    with caution.
+    """
+
     input_spec  = CopyInputSpec
     output_spec = CopyOutputSpec
     _cmd = 'minccopy'
 
     def _list_outputs(self):
-        # FIXME seems generic, is this necessary?
         outputs = self.output_spec().get()
         outputs['output_file'] = self.inputs.output_file
         return outputs
