@@ -207,10 +207,6 @@ class ExtractTask(StdOutCommandLine):
         return outputs
 
 class ToRawInputSpec(StdOutCommandLineInputSpec):
-    """
-    For the MINC command minctoraw.
-    """
-
     input_file = File(
                     desc='input file',
                     exists=True,
@@ -218,77 +214,113 @@ class ToRawInputSpec(StdOutCommandLineInputSpec):
                     argstr='%s',
                     position=-2,)
 
-    # FIXME xor on the write_ options
+    output_file = File(
+                    desc='output file',
+                    position=-1)
+
+    _xor_write = ('write_byte', 'write_short', 'write_int',
+                  'write_long', 'write_float', 'write_double')
 
     write_byte = traits.Bool(
-                desc='Write out data as bytes',
-                argstr='-byte',)
+                desc='Write out data as bytes.',
+                argstr='-byte',
+                xor=_xor_write)
 
     write_short = traits.Bool(
-                desc='Write out data as short integers',
-                argstr='-short',)
+                desc='Write out data as short integers.',
+                argstr='-short',
+                xor=_xor_write)
 
     write_int = traits.Bool(
-                desc='Write out data as 32-bit integers',
-                argstr='-int',)
+                desc='Write out data as 32-bit integers.',
+                argstr='-int',
+                xor=_xor_write)
 
     write_long = traits.Bool(
-                desc='Superseded by -int',
-                argstr='-long',)
+                desc='Superseded by write_int.',
+                argstr='-long',
+                xor=_xor_write)
 
     write_float = traits.Bool(
-                desc='Write out data as single precision floating-point values',
-                argstr='-float',)
+                desc='Write out data as single precision floating-point values.',
+                argstr='-float',
+                xor=_xor_write)
 
     write_double = traits.Bool(
-                desc='Write out data as double precision floating-point values',
-                argstr='-double',)
+                desc='Write out data as double precision floating-point values.',
+                argstr='-double',
+                xor=_xor_write)
 
-    # FIXME xor option on signed/unsigned?
+    _xor_signed = ('write_signed', 'write_unsigned')
 
     write_signed = traits.Bool(
-                desc='Write out signed data',
-                argstr='-signed',)
+                desc='Write out signed data.',
+                argstr='-signed',
+                xor=_xor_signed)
 
     write_unsigned = traits.Bool(
-                desc='Write out unsigned data',
-                argstr='-unsigned',)
+                desc='Write out unsigned data.',
+                argstr='-unsigned',
+                xor=_xor_signed)
 
     write_range = traits.Tuple(
                 traits.Float, traits.Float, argstr='-range %s %s',
-                desc='Specify the range of output values\nDefault value: 1.79769e+308 1.79769e+308',) # FIXME minctoraw output is missing a negative?
+                desc='Specify the range of output values\nDefault value: 1.79769e+308 1.79769e+308.',)
 
     _xor_normalize = ('normalize', 'nonormalize',)
 
     normalize = traits.Bool(
-                    desc='Normalize integer pixel values to file max and min',
+                    desc='Normalize integer pixel values to file max and min.',
                     argstr='-normalize',
                     xor=_xor_normalize)
 
     nonormalize = traits.Bool(
-                    desc='Turn off pixel normalization',
+                    desc='Turn off pixel normalization.',
                     argstr='-nonormalize',
                     xor=_xor_normalize)
 
 class ToRawOutputSpec(TraitedSpec):
-    # FIXME Not sure if I'm defining the outout specs correctly.
-
-    output_file = File(
-                    desc='output file',
-                    exists=True,
-                    genfile=True,)
+    output_file = File(desc='output file in raw format', exists=True)
 
 class ToRawTask(StdOutCommandLine):
+    """Dump a chunk of MINC file data. This program is largely
+    superceded by mincextract (see ExtractTask).
+
+    Examples
+    --------
+
+    >>> from nipype.interfaces.minc import ToRawTask
+    >>> from nipype.testing import mincfile
+
+    >>> toraw = ToRawTask(input_file=mincfile)
+    >>> toraw.run() # doctest: +SKIP
+
+    >>> toraw = ToRawTask(input_file=mincfile, write_range=(0, 100))
+    >>> toraw.run() # doctest: +SKIP
+    """
+
     input_spec  = ToRawInputSpec
     output_spec = ToRawOutputSpec
     _cmd = 'minctoraw'
 
     def _gen_outfilename(self):
-        # FIXME check isdefined as in the Extract code.
         """
-        Convert foo.mnc to foo.raw.
+        If the user specified output_file then return that, otherwise
+        return the full path to the input file with the extension
+        changed to '.raw'.
         """
-        return os.path.splitext(self.inputs.input_file)[0] + '.raw'
+
+        output_file = self.inputs.output_file
+
+        if isdefined(output_file):
+            return output_file
+        else:
+            return os.path.splitext(self.inputs.input_file)[0] + '.raw'
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
 
 class ConvertInputSpec(CommandLineInputSpec):
     input_file = File(
