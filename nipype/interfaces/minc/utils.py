@@ -15,6 +15,10 @@ Author: Carlo Hamalainen <carlo@carlo-hamalainen.net>
 # FIXME double-check behaviour of usedefault=True on ranges with values specified, and also int traits. Don't want
 # command line options to be specified if the user doesn't set the value.
 
+# FIXME -filelist options accept '-' for stdin. Can we support this?
+
+# FIXME Can we check the arguments to "-range min max" to avoid min > max?
+
 from nipype.interfaces.base import (
     TraitedSpec,
     CommandLineInputSpec,
@@ -526,10 +530,6 @@ class ToEcatTask(CommandLine):
         return outputs
 
 class DumpInputSpec(StdOutCommandLineInputSpec):
-    """
-    For the MINC command mincdump.
-    """
-
     input_file = File(
                     desc='input file',
                     exists=True,
@@ -537,72 +537,74 @@ class DumpInputSpec(StdOutCommandLineInputSpec):
                     argstr='%s',
                     position=-2,)
 
+    output_file = File(
+                    desc='output file',
+                    position=-1)
+
     _xor_coords_or_header = ('coordinate_data', 'header_data',)
 
     coordinate_data = traits.Bool(
-                    desc='Coordinate variable data and header information',
+                    desc='Coordinate variable data and header information.',
                     argstr='-c',
-                    xor=_xor_coords_or_header,)
+                    xor=_xor_coords_or_header)
 
     header_data = traits.Bool(
-                    desc='Header information only, no data',
+                    desc='Header information only, no data.',
                     argstr='-h',
-                    xor=_xor_coords_or_header,)
+                    xor=_xor_coords_or_header)
 
     _xor_annotations = ('annotations_brief', 'annotations_full',)
 
-    # FIXME Instead of an enum, make a separate Bool trait called fortran_indices and another
-    # called c_indices?
-
     annotations_brief = traits.Enum('c', 'f',
                             argstr='-b %s',
-                            desc='Brief annotations for C or Fortran indices in data',
+                            desc='Brief annotations for C or Fortran indices in data.',
                             xor=_xor_annotations)
 
     annotations_full = traits.Enum('c', 'f',
                             argstr='-f %s',
-                            desc='Full annotations for C or Fortran indices in data',
+                            desc='Full annotations for C or Fortran indices in data.',
                             xor=_xor_annotations)
 
     variables = InputMultiPath(
                             traits.Str,
-                            desc='Output data for specified variables only',
+                            desc='Output data for specified variables only.',
                             sep=',',
-                            argstr='-v %s',)
+                            argstr='-v %s')
 
     line_length = traits.Range(low=0,
-                        desc='Line length maximum in data section (default 80)',
-                        value=0,
+                        desc='Line length maximum in data section (default 80).',
+                        value=80,
                         usedefault=False,
-                        argstr='-l %d',)
+                        argstr='-l %d')
 
     netcdf_name = traits.Str(
-                        desc='Name for netCDF (default derived from file name)',
-                        argstr='-n %s',)
+                        desc='Name for netCDF (default derived from file name).',
+                        argstr='-n %s')
 
     precision = traits.Either(
                         traits.Int(),
                         traits.Tuple(traits.Int, traits.Int),
                         desc='Display floating-point values with less precision',
-                        argstr='%s',)
+                        argstr='%s',) # See _format_arg in DumPTask for actual formatting.
 
 class DumpOutputSpec(TraitedSpec):
-    # FIXME Not sure if I'm defining the outout specs correctly.
-
-    output_file = File(
-                    desc='output file',
-                    exists=True,
-                    genfile=True,)
+    output_file = File(desc='output file', exists=True)
 
 class DumpTask(StdOutCommandLine):
-    """
-    >>> from os.path import splitext
-    >>> from nipype.testing import example_data
-    >>> input_file = example_data('minc/minc_test_2D_01.mnc')
-    >>> output_file = splitext(input_file)[0] + '.txt'
-    >>> toraw = DumpTask(input_file=input_file)
-    >>> toraw.cmdline == 'mincdump %s > %s' % (input_file, output_file,)
-    True
+    """Dump a MINC file. Typically used in conjunction with mincgen (see GenTask).
+
+    Examples
+    --------
+
+    >>> from nipype.interfaces.minc import DumpTask
+    >>> from nipype.testing import mincfile
+
+    >>> dump = DumpTask(input_file=mincfile)
+    >>> dump.run() # doctest: +SKIP
+
+    >>> dump = DumpTask(input_file=mincfile, output_file='/tmp/out.txt', precision=(3, 4))
+    >>> dump.run() # doctest: +SKIP
+
     """
 
     input_spec  = DumpInputSpec
@@ -613,20 +615,30 @@ class DumpTask(StdOutCommandLine):
         if name == 'precision':
             if isinstance(value, int):
                 return '-p %d' % value
-            elif isinstance(value, tuple):
+            elif isinstance(value, tuple) and isinstance(value[0], int) and isinstance(value[1], int):
                 return '-p %d,%d' % (value[0], value[1],)
             else:
-                raise NotImplemented # FIXME some other exception?
+                raise ValueError, 'Invalid precision argument: ' + str(value)
         return super(DumpTask, self)._format_arg(name, spec, value)
 
-    # FIXME Are we forced to send outout to a file? Can we pipe it
-    # to another minc command directly?
     def _gen_outfilename(self):
-        # FIXME allow user to specify an output file as in the Extract task.
         """
-        Dump foo.mnc to foo.txt.
+        If the user specified output_file then return that, otherwise
+        return the full path to the input file with the extension
+        changed to '.txt'.
         """
-        return os.path.splitext(self.inputs.input_file)[0] + '.txt'
+
+        output_file = self.inputs.output_file
+
+        if isdefined(output_file):
+            return output_file
+        else:
+            return os.path.splitext(self.inputs.input_file)[0] + '.txt'
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
 
 class AverageInputSpec(CommandLineInputSpec):
     _xor_input_files = ('input_files', 'filelist')
@@ -636,10 +648,10 @@ class AverageInputSpec(CommandLineInputSpec):
                     desc='input file(s) for averaging',
                     exists=True,
                     mandatory=True,
-                    sep=' ', # FIXME test with files that contain spaces - does InputMultiPath do the right thing?
+                    sep=' ',
                     argstr='%s',
-                    position=-2, # FIXME test with multiple files, is order ok?
-                    xor=_xor_input_files) # FIXME test this xor
+                    position=-2,
+                    xor=_xor_input_files)
 
     output_file = File(
                     desc='output file',
@@ -648,7 +660,7 @@ class AverageInputSpec(CommandLineInputSpec):
                     argstr='%s',
                     position=-1,)
 
-    two = traits.Bool(desc='Produce a MINC 2.0 format output file', argstr='-2')
+    two = traits.Bool(desc='Produce a MINC 2.0 format output file.', argstr='-2')
 
     _xor_clobber = ('clobber', 'no_clobber')
 
@@ -662,52 +674,45 @@ class AverageInputSpec(CommandLineInputSpec):
 
     debug   = traits.Bool(desc='Print out debugging messages.', argstr='-debug')
 
-    # FIXME How to handle stdin option ('-') here? Not relevant?
-    filelist = traits.File(desc='Specify the name of a file containing input file names.', argstr='-filelist %s', mandatory=True, xor=_xor_input_files)
+    filelist = traits.File(desc='Specify the name of a file containing input file names.', argstr='-filelist %s', exists=True, mandatory=True, xor=_xor_input_files)
 
     _xor_check_dimensions = ('check_dimensions', 'no_check_dimensions',)
 
     check_dimensions    = traits.Bool(desc='Check that dimension info matches across files (default).', argstr='-check_dimensions',     xor=_xor_check_dimensions)
     no_check_dimensions = traits.Bool(desc='Do not check dimension info.',                              argstr='-nocheck_dimensions',   xor=_xor_check_dimensions)
 
-
-    # FIXME mincaverage seems to accept more than one of these options; I assume
-    # that it takes the last one, and it makes more sense for these to be
-    # put into an xor case.
-
     _xor_format = ('format_filetype', 'format_byte', 'format_short',
                    'format_int', 'format_long', 'format_float', 'format_double',
                    'format_signed', 'format_unsigned',)
 
-    format_filetype     = traits.Bool(desc='Use data type of first file (default).',                    argstr='-filetype', xor=_xor_format)
-    format_byte         = traits.Bool(desc='Write out byte data.',                                      argstr='-byte',     xor=_xor_format)
-    format_short        = traits.Bool(desc='Write out short integer data.',                             argstr='-short',    xor=_xor_format)
-    format_int          = traits.Bool(desc='Write out 32-bit integer data.',                            argstr='-int',      xor=_xor_format)
-    format_long         = traits.Bool(desc='Superseded by -int.',                                       argstr='-long',     xor=_xor_format)
-    format_float        = traits.Bool(desc='Write out single-precision floating-point data.',           argstr='-float',    xor=_xor_format)
-    format_double       = traits.Bool(desc='Write out double-precision floating-point data.',           argstr='-double',   xor=_xor_format)
-    format_signed       = traits.Bool(desc='Write signed integer data.',                                argstr='-signed',   xor=_xor_format)
-    format_unsigned     = traits.Bool(desc='Write unsigned integer data (default if type specified).',  argstr='-unsigned', xor=_xor_format) # FIXME mark with default=?
-
+    format_filetype     = traits.Bool(desc='Use data type of first file (default).',            argstr='-filetype', xor=_xor_format)
+    format_byte         = traits.Bool(desc='Write out byte data.',                              argstr='-byte',     xor=_xor_format)
+    format_short        = traits.Bool(desc='Write out short integer data.',                     argstr='-short',    xor=_xor_format)
+    format_int          = traits.Bool(desc='Write out 32-bit integer data.',                    argstr='-int',      xor=_xor_format)
+    format_long         = traits.Bool(desc='Superseded by -int.',                               argstr='-long',     xor=_xor_format)
+    format_float        = traits.Bool(desc='Write out single-precision floating-point data.',   argstr='-float',    xor=_xor_format)
+    format_double       = traits.Bool(desc='Write out double-precision floating-point data.',   argstr='-double',   xor=_xor_format)
+    format_signed       = traits.Bool(desc='Write signed integer data.',                        argstr='-signed',   xor=_xor_format)
+    format_unsigned     = traits.Bool(desc='Write unsigned integer data (default).',            argstr='-unsigned', xor=_xor_format)
 
     max_buffer_size_in_kb = traits.Range(
                                 low=0,
                                 desc='Specify the maximum size of the internal buffers (in kbytes).',
                                 value=4096,
-                                usedefault=False,
                                 argstr='-max_buffer_size_in_kb %d',)
 
     _xor_normalize = ('normalize', 'nonormalize',)
-    normalize   = traits.Bool(desc='Normalize data sets for mean intensity.', argstr='-normalize', xor=_xor_normalize)
-    nonormalize = traits.Bool(desc='Do not normalize data sets (default).',   argstr='-nonormalize', xor=_xor_normalize, default=True) # FIXME check default=? behaviour
+
+    normalize   = traits.Bool(desc='Normalize data sets for mean intensity.', argstr='-normalize',   xor=_xor_normalize)
+    nonormalize = traits.Bool(desc='Do not normalize data sets (default).',   argstr='-nonormalize', xor=_xor_normalize)
 
     voxel_range = traits.Tuple(
                 traits.Int, traits.Int, argstr='-range %d %d',
-                desc='Valid range for output data.',) # FIXME ensure min <= max??? Ditto for other range parameters.
+                desc='Valid range for output data.')
 
     sdfile = traits.File(
                 desc='Specify an output sd file (default=none).',
-                argstr='-sdfile %s',)
+                argstr='-sdfile %s')
 
     _xor_copy_header = ('copy_header, no_copy_header')
 
@@ -720,7 +725,7 @@ class AverageInputSpec(CommandLineInputSpec):
 
     binrange = traits.Tuple(
                 traits.Float, traits.Float, argstr='-binrange %s %s',
-                desc='Specify a range for binarization. Default value: 1.79769e+308 -1.79769e+308.') # FIXME shouldn't that be -1.79769e+308 1.79769e+308? Min then max?
+                desc='Specify a range for binarization. Default value: 1.79769e+308 -1.79769e+308.')
 
     binvalue = traits.Float(desc='Specify a target value (+/- 0.5) for binarization. Default value: -1.79769e+308', argstr='-binvalue %s')
 		
@@ -733,20 +738,30 @@ class AverageInputSpec(CommandLineInputSpec):
     width_weighted = traits.Bool(desc='Weight by dimension widths when -avgdim is used.', argstr='-width_weighted', requires=('avgdim',))
 
 class AverageOutputSpec(TraitedSpec):
-    # FIXME Am I defining the output spec correctly?
-    output_file = File(
-                    desc='output file',
-                    exists=True,)
+    output_file = File(desc='output file', exists=True)
 
 class AverageTask(CommandLine):
+    """Average a number of MINC files.
+
+    Examples
+    --------
+
+    >>> from nipype.interfaces.minc import DumpTask
+    >>> from nipype.testing import mincfile, nonempty_minc_data
+
+    >>> files = [nonempty_minc_data(i) for i in range(3)]
+    >>> average = AverageTask(input_files=files, output_file='/tmp/tmp.mnc')
+    >>> dump.run() # doctest: +SKIP
+
+    """
+
     input_spec  = AverageInputSpec
     output_spec = AverageOutputSpec
     _cmd = 'mincaverage'
 
     def _list_outputs(self):
-        # FIXME seems generic, is this necessary?
         outputs = self.output_spec().get()
-        outputs['output_file'] = self.inputs.output_file
+        outputs['output_file'] = os.path.abspath(self.inputs.output_file)
         return outputs
 
 class BlobInputSpec(CommandLineInputSpec):

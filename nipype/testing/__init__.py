@@ -34,6 +34,9 @@ from .utils import skip_if_no_package, package_check
 
 skipif = dec.skipif
 
+def nonempty_minc_data(i, shape='2D'):
+    return os.path.join(basedir, 'data', 'minc', 'minc_test_%s_%.2d.mnc' % (shape, i,))
+
 def example_data(infile='functional.nii'):
     """returns path to empty example data files for doc tests
     it will raise an exception if filename is not in the directory"""
