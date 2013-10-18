@@ -22,6 +22,7 @@ basedir = os.path.dirname(filepath)
 
 funcfile = os.path.join(basedir, 'data', 'functional.nii')
 anatfile = os.path.join(basedir, 'data', 'structural.nii')
+mincfile = os.path.join(basedir, 'data', 'minc', 'minc_test_2D_00.mnc')
 template = funcfile
 transfm = funcfile
 

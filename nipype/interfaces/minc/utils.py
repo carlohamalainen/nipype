@@ -34,10 +34,6 @@ warn = warnings.warn
 warnings.filterwarnings('always', category=UserWarning)
 
 class ExtractInputSpec(StdOutCommandLineInputSpec):
-    """
-    For the MINC command mincextract.
-    """
-
     input_file = File(
                     desc='input file',
                     exists=True,
@@ -55,94 +51,94 @@ class ExtractInputSpec(StdOutCommandLineInputSpec):
                   'write_unsigned',)
 
     write_ascii = traits.Bool(
-                desc='Write out data as ascii strings (default)',
+                desc='Write out data as ascii strings (default).',
                 argstr='-ascii',
                 xor=_xor_write)
 
     write_byte = traits.Bool(
-                desc='Write out data as bytes',
+                desc='Write out data as bytes.',
                 argstr='-byte',
                 xor=_xor_write)
 
     write_short = traits.Bool(
-                desc='Write out data as short integers',
+                desc='Write out data as short integers.',
                 argstr='-short',
                 xor=_xor_write)
 
     write_int = traits.Bool(
-                desc='Write out data as 32-bit integers',
+                desc='Write out data as 32-bit integers.',
                 argstr='-int',
                 xor=_xor_write)
 
     write_long = traits.Bool(
-                desc='Superseded by -int',
+                desc='Superseded by write_int.',
                 argstr='-long',
                 xor=_xor_write)
 
     write_float = traits.Bool(
-                desc='Write out data as single precision floating-point values',
+                desc='Write out data as single precision floating-point values.',
                 argstr='-float',
                 xor=_xor_write)
 
     write_double = traits.Bool(
-                desc='Write out data as double precision floating-point values',
+                desc='Write out data as double precision floating-point values.',
                 argstr='-double',
                 xor=_xor_write)
 
     _xor_signed = ('write_signed', 'write_unsigned')
 
     write_signed = traits.Bool(
-                desc='Write out signed data',
+                desc='Write out signed data.',
                 argstr='-signed',
                 xor=_xor_signed)
 
     write_unsigned = traits.Bool(
-                desc='Write out unsigned data',
+                desc='Write out unsigned data.',
                 argstr='-unsigned',
                 xor=_xor_signed)
 
     write_range = traits.Tuple(
                 traits.Float, traits.Float, argstr='-range %s %s',
-                desc='Specify the range of output values\nDefault value: 1.79769e+308 1.79769e+308',)
+                desc='Specify the range of output values\nDefault value: 1.79769e+308 1.79769e+308.',)
 
     _xor_normalize = ('normalize', 'nonormalize',)
 
     normalize = traits.Bool(
-                    desc='Normalize integer pixel values to file max and min',
+                    desc='Normalize integer pixel values to file max and min.',
                     argstr='-normalize',
                     xor=_xor_normalize)
 
     nonormalize = traits.Bool(
-                    desc='Turn off pixel normalization',
+                    desc='Turn off pixel normalization.',
                     argstr='-nonormalize',
                     xor=_xor_normalize)
 
     image_range = traits.Tuple(
                     traits.Float, traits.Float,
-                    desc='Specify the range of real image values for normalization',
+                    desc='Specify the range of real image values for normalization.',
                     argstr='-image_range %s %s')
 
     image_minimum = traits.Float(
-                    desc='Specify the minimum real image value for normalization. Default value: 1.79769e+308',
+                    desc='Specify the minimum real image value for normalization. Default value: 1.79769e+308.',
                     argstr='-image_minimum %s')
 
     image_maximum = traits.Float(
-                    desc='Specify the maximum real image value for normalization. Default value: 1.79769e+308',
+                    desc='Specify the maximum real image value for normalization. Default value: 1.79769e+308.',
                     argstr='-image_maximum %s')
 
     start = InputMultiPath(
                     traits.Int,
-                    desc='Specifies corner of hyperslab (C conventions for indices)',
+                    desc='Specifies corner of hyperslab (C conventions for indices).',
                     sep=',',
                     argstr='-start %s',)
 
     count = InputMultiPath(
                     traits.Int,
-                    desc='Specifies edge lengths of hyperslab to read',
+                    desc='Specifies edge lengths of hyperslab to read.',
                     sep=',',
                     argstr='-count %s',)
 
-    # FIXME make sure that len(start) == len(count)?
+    # FIXME Can we make sure that len(start) == len(count)?
 
     _xor_flip = ('flip_positive_direction', 'flip_negative_direction', 'flip_any_direction')
 
@@ -169,21 +165,33 @@ class ExtractInputSpec(StdOutCommandLineInputSpec):
     flip_z_any      = traits.Bool(desc='Don\'t flip images along z-axis (default).',                    argstr='-zanydirection',    xor=_xor_z_flip)
 
 class ExtractOutputSpec(TraitedSpec):
-    # FIXME Not sure if I'm defining the outout specs correctly.
-
-    output_file = File(
-                    desc='output file',
-                    exists=True,
-                    genfile=True,)
+    output_file = File(desc='output file in raw/text format', exists=True)
 
 class ExtractTask(StdOutCommandLine):
+    """Dump a hyperslab of MINC file data.
+
+    Examples
+    --------
+
+    >>> from nipype.interfaces.minc import ExtractTask
+    >>> from nipype.testing import mincfile
+
+    >>> extract = ExtractTask(input_file=mincfile)
+    >>> extract.run() # doctest: +SKIP
+
+    >>> extract = ExtractTask(input_file=mincfile, start=[3, 10, 5], count=[4, 4, 4]) # extract a 4x4x4 slab at offset [3, 10, 5]
+    >>> extract.run() # doctest: +SKIP
+    """
+
     input_spec  = ExtractInputSpec
     output_spec = ExtractOutputSpec
-    cmd = 'mincextract'
+    _cmd = 'mincextract'
 
     def _gen_outfilename(self):
         """
-        Extract foo.mnc to foo.raw.
+        If the user specified output_file then return that, otherwise
+        return the full path to the input file with the extension
+        changed to '.raw'.
         """
 
         output_file = self.inputs.output_file
@@ -192,6 +200,11 @@ class ExtractTask(StdOutCommandLine):
             return output_file
         else:
             return os.path.splitext(self.inputs.input_file)[0] + '.raw'
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
 
 class ToRawInputSpec(StdOutCommandLineInputSpec):
     """
@@ -268,7 +281,7 @@ class ToRawOutputSpec(TraitedSpec):
 class ToRawTask(StdOutCommandLine):
     input_spec  = ToRawInputSpec
     output_spec = ToRawOutputSpec
-    cmd = 'minctoraw'
+    _cmd = 'minctoraw'
 
     def _gen_outfilename(self):
         # FIXME check isdefined as in the Extract code.
@@ -323,7 +336,7 @@ class ConvertOutputSpec(TraitedSpec):
 class ConvertTask(CommandLine):
     input_spec  = ConvertInputSpec
     output_spec = ConvertOutputSpec
-    cmd = 'mincconvert'
+    _cmd = 'mincconvert'
 
     def _list_outputs(self):
         # FIXME seems generic, is this necessary?
@@ -379,7 +392,7 @@ class CopyOutputSpec(TraitedSpec):
 class CopyTask(CommandLine):
     input_spec  = CopyInputSpec
     output_spec = CopyOutputSpec
-    cmd = 'minccopy'
+    _cmd = 'minccopy'
 
     def _list_outputs(self):
         # FIXME seems generic, is this necessary?
@@ -443,7 +456,7 @@ class ToEcatOutputSpec(TraitedSpec):
 class ToEcatTask(CommandLine):
     input_spec  = ToEcatInputSpec
     output_spec = ToEcatOutputSpec
-    cmd = 'minctoecat'
+    _cmd = 'minctoecat'
 
     def _list_outputs(self):
         # FIXME seems generic, is this necessary?
@@ -538,7 +551,7 @@ class DumpTask(StdOutCommandLine):
 
     input_spec  = DumpInputSpec
     output_spec = DumpOutputSpec
-    cmd = 'mincdump'
+    _cmd = 'mincdump'
 
     def _format_arg(self, name, spec, value):
         if name == 'precision':
@@ -672,7 +685,7 @@ class AverageOutputSpec(TraitedSpec):
 class AverageTask(CommandLine):
     input_spec  = AverageInputSpec
     output_spec = AverageOutputSpec
-    cmd = 'mincaverage'
+    _cmd = 'mincaverage'
 
     def _list_outputs(self):
         # FIXME seems generic, is this necessary?
@@ -709,7 +722,7 @@ class BlobOutputSpec(TraitedSpec):
 class BlobTask(CommandLine):
     input_spec  = BlobInputSpec
     output_spec = BlobOutputSpec
-    cmd = 'mincblob'
+    _cmd = 'mincblob'
 
     def _list_outputs(self):
         # FIXME seems generic, is this necessary?
@@ -820,7 +833,7 @@ class CalcOutputSpec(TraitedSpec):
 class CalcTask(CommandLine):
     input_spec  = CalcInputSpec
     output_spec = CalcOutputSpec
-    cmd = 'minccalc'
+    _cmd = 'minccalc'
 
     def _list_outputs(self):
         # FIXME seems generic, is this necessary?

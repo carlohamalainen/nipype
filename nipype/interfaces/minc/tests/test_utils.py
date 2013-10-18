@@ -125,7 +125,7 @@ def test_mincaverage_filelist():
     yield assert_true, np.max(np.abs(data_avg_numpy - data_avg_minc)) < 1e-07
 
 @skipif(no_minc)
-def test_mincextract():
+def test_mincextract_ascii():
     """
     Test extract.
     """
@@ -143,3 +143,23 @@ def test_mincextract():
 
     # FIXME will this have issues with roundoff on different platforms?
     yield assert_true, hashlib.md5(output).hexdigest() == '89941a49f2536cc114a5cfd4b5df0dd2'
+
+def test_mincextract_bytes():
+    """
+    Test extract.
+    """
+
+    input_file  = example_data('minc/minc_test_2D_00.mnc')
+    output_file = create_empty_temp_file(suffix='.raw')
+
+    e = minc.ExtractTask(input_file=input_file, output_file=output_file, write_byte=True)
+    e.run()
+
+    # remove(output_file)
+    output = open(output_file).read()
+
+    yield assert_true, len(output) == 200
+
+    # FIXME will this have issues with roundoff on different platforms?
+    print hashlib.md5(output).hexdigest()
+    yield assert_true, hashlib.md5(output).hexdigest() == '19afc43ef27c969afaa23e41bcefb78e'
