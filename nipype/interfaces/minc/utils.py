@@ -346,7 +346,7 @@ class ConvertInputSpec(CommandLineInputSpec):
                 argstr='-2',)
 
     template = traits.Bool(
-                desc='Create a template file.',
+                desc='Create a template file. The dimensions, variables, and attributes of the input file are preserved but all data it set to zero.',
                 argstr='-template',)
 
     compression = traits.Enum(0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
@@ -360,18 +360,26 @@ class ConvertInputSpec(CommandLineInputSpec):
                         argstr='-chunk %d',)
 
 class ConvertOutputSpec(TraitedSpec):
-    # FIXME Am I defining the output spec correctly?
-    output_file = File(
-                    desc='output file',
-                    exists=True,)
+    output_file = File(desc='output file', exists=True)
 
 class ConvertTask(CommandLine):
+    """convert between MINC 1 to MINC 2 format.
+
+    Examples
+    --------
+
+    >>> from nipype.interfaces.minc import ToRawTask
+    >>> from nipype.testing import mincfile
+    >>> c = ConvertTask(input_file=mincfile, output_file='/tmp/out.mnc', two=True) # Convert to MINC2 format.
+    >>> c.run() # doctest: +SKIP
+    """
+
+
     input_spec  = ConvertInputSpec
     output_spec = ConvertOutputSpec
     _cmd = 'mincconvert'
 
     def _list_outputs(self):
-        # FIXME seems generic, is this necessary?
         outputs = self.output_spec().get()
         outputs['output_file'] = self.inputs.output_file
         return outputs
