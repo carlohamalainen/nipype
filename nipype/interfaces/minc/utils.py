@@ -482,26 +482,48 @@ class ToEcatInputSpec(CommandLineInputSpec):
                     argstr='-label',)
 
 class ToEcatOutputSpec(TraitedSpec):
-    # FIXME Am I defining the output spec correctly?
-    output_file = File(
-                    desc='output file',
-                    exists=True,)
+    output_file = File(desc='output file', exists=True)
 
 class ToEcatTask(CommandLine):
+    """Convert a 2D image, a 3D volumes or a 4D dynamic volumes
+    written in MINC file format to a 2D, 3D or 4D Ecat7 file.
+
+    Examples
+    --------
+
+    >>> from nipype.interfaces.minc import ToEcatTask
+    >>> from nipype.testing import mincfile
+
+    >>> c = ToEcatTask(input_file=mincfile)
+    >>> c.run() # doctest: +SKIP
+
+    >>> c = ToEcatTask(input_file=mincfile, voxels_as_integers=True)
+    >>> c.run() # doctest: +SKIP
+
+    """
+
     input_spec  = ToEcatInputSpec
     output_spec = ToEcatOutputSpec
     _cmd = 'minctoecat'
 
-    def _list_outputs(self):
-        # FIXME seems generic, is this necessary?
-        outputs = self.output_spec().get()
-        outputs['output_file'] = self.inputs.output_file
-        return outputs
+    def _gen_outfilename(self):
+        """
+        If the user specified output_file then return that, otherwise
+        return the full path to the input file with the extension
+        changed to '.v'.
+        """
 
-    def _gen_filename(self, name):
-        if name == 'output_file':
+        output_file = self.inputs.output_file
+
+        if isdefined(output_file):
+            return output_file
+        else:
             return os.path.splitext(self.inputs.input_file)[0] + '.v'
-        return None
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
 
 class DumpInputSpec(StdOutCommandLineInputSpec):
     """
