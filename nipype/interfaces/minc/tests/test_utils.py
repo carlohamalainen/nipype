@@ -163,3 +163,98 @@ def test_mincextract_bytes():
     # FIXME will this have issues with roundoff on different platforms?
     print hashlib.md5(output).hexdigest()
     yield assert_true, hashlib.md5(output).hexdigest() == '19afc43ef27c969afaa23e41bcefb78e'
+
+@skipif(no_minc)
+def test_minccalc_add():
+    """
+    Test mincaverage, add two files together.
+    """
+
+    np.random.seed(0) # FIXME fix the seed for tests?
+
+    file1 = create_empty_temp_file()
+    file2 = create_empty_temp_file()
+    output_file = create_empty_temp_file()
+
+    shape = (40, 30)
+
+    data1 = np.random.random(shape)
+    data2 = np.random.random(shape)
+
+    write_minc(file1, data1)
+    write_minc(file2, data2)
+
+    a = minc.CalcTask(input_files=[file1, file2], output_file=output_file, clobber=True,
+                      expression='A[0] + A[1]')
+    a.run()
+
+    data_minccalc_output = read_minc(output_file)
+
+    remove(file1)
+    remove(file2)
+    remove(output_file)
+
+    yield assert_true, np.max(np.abs((data1 + data2) - data_minccalc_output)) < 1e-07
+
+@skipif(no_minc)
+def test_minccalc_sub():
+    """
+    Test mincaverage, subtract two files.
+    """
+
+    np.random.seed(0) # FIXME fix the seed for tests?
+
+    file1 = create_empty_temp_file()
+    file2 = create_empty_temp_file()
+    output_file = create_empty_temp_file()
+
+    shape = (40, 30)
+
+    data1 = np.random.random(shape)
+    data2 = np.random.random(shape)
+
+    write_minc(file1, data1)
+    write_minc(file2, data2)
+
+    a = minc.CalcTask(input_files=[file1, file2], output_file=output_file, clobber=True,
+                      expression='A[0] - A[1]')
+    a.run()
+
+    data_minccalc_output = read_minc(output_file)
+
+    remove(file1)
+    remove(file2)
+    remove(output_file)
+
+    yield assert_true, np.max(np.abs((data1 - data2) - data_minccalc_output)) < 1e-07
+
+@skipif(no_minc)
+def test_minccalc_sumsquares():
+    """
+    Test mincaverage, sum of squares.
+    """
+
+    np.random.seed(0) # FIXME fix the seed for tests?
+
+    shape = (40, 30)
+
+    nr_files = 5
+
+    filenames = [create_empty_temp_file() for _ in range(nr_files)]
+    data      = [np.random.random(shape)  for _ in range(nr_files)]
+
+    for i in range(nr_files): write_minc(filenames[i], data[i])
+
+    output_file = create_empty_temp_file()
+
+    a = minc.CalcTask(input_files=filenames, output_file=output_file, clobber=True,
+                      expression='total = 0; for {i in [0:(len(A)-1)]} { total = total + A[i]^2 }; total')
+    a.run()
+
+    data_minccalc_output = read_minc(output_file)
+
+    for f in filenames: remove(f)
+    remove(output_file)
+
+    sum_squares = np.sum([x**2 for x in data], axis=0)
+    yield assert_true, np.max(np.abs(sum_sqares - data_minccalc_output)) < 1e-07
