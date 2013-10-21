@@ -785,18 +785,26 @@ class BlobInputSpec(CommandLineInputSpec):
     magnitude   = traits.Bool(desc='compute the magnitude of the displacement vector',              argstr='-magnitude')
 
 class BlobOutputSpec(TraitedSpec):
-    # FIXME Am I defining the output spec correctly?
-    output_file = File(
-                    desc='output file',
-                    exists=True,)
+    output_file = File(desc='output file', exists=True)
 
 class BlobTask(CommandLine):
+    """Calculate blobs from minc deformation grids.
+
+    Examples
+    --------
+
+    >>> from nipype.interfaces.minc import BlobTask
+    >>> from nipype.testing import mincfile
+
+    >>> blob = BlobTask(input_file=mincfile, output_file='/tmp/tmp.mnc', trace=True)
+    >>> blob.run() # doctest: +SKIP
+    """
+
     input_spec  = BlobInputSpec
     output_spec = BlobOutputSpec
     _cmd = 'mincblob'
 
     def _list_outputs(self):
-        # FIXME seems generic, is this necessary?
         outputs = self.output_spec().get()
         outputs['output_file'] = self.inputs.output_file
         return outputs
@@ -809,12 +817,18 @@ class CalcInputSpec(CommandLineInputSpec):
                     desc='input file(s) for calculation',
                     exists=True,
                     mandatory=True,
-                    sep=' ', # FIXME test with files that contain spaces - does InputMultiPath do the right thing?
+                    sep=' ',
                     argstr='%s',
-                    position=-2,) # FIXME test with multiple files, is order ok?
+                    position=-2,)
 
+    output_file = File(
+                    desc='output file',
+                    mandatory=True,
+                    genfile=False,
+                    argstr='%s',
+                    position=-1,)
 
-    two = traits.Bool(desc='Produce a MINC 2.0 format output file', argstr='-2')
+    two = traits.Bool(desc='Produce a MINC 2.0 format output file.', argstr='-2')
 
     _xor_clobber = ('clobber', 'no_clobber')
 
@@ -828,31 +842,26 @@ class CalcInputSpec(CommandLineInputSpec):
 
     debug   = traits.Bool(desc='Print out debugging messages.', argstr='-debug')
 
-    # FIXME How to handle stdin option here? Not relevant?
-    filelist = traits.File(desc='Specify the name of a file containing input file names (- for stdin).', argstr='-filelist %s', mandatory=True, xor=_xor_input_files)
+    filelist = traits.File(desc='Specify the name of a file containing input file names.', argstr='-filelist %s', mandatory=True, xor=_xor_input_files)
 
     _xor_copy_header = ('copy_header, no_copy_header')
 
-    copy_header     = traits.Bool(desc='Copy all of the header from the first file.',            argstr='-copy_header',   xor=_xor_copy_header)
+    copy_header     = traits.Bool(desc='Copy all of the header from the first file.',         argstr='-copy_header',   xor=_xor_copy_header)
     no_copy_header  = traits.Bool(desc='Do not copy all of the header from the first file.',  argstr='-nocopy_header', xor=_xor_copy_header)
-
-    # FIXME mincaverage seems to accept more than one of these options; I assume
-    # that it takes the last one, and it makes more sense for these to be
-    # put into an xor case.
 
     _xor_format = ('format_filetype', 'format_byte', 'format_short',
                    'format_int', 'format_long', 'format_float', 'format_double',
                    'format_signed', 'format_unsigned',)
 
-    format_filetype     = traits.Bool(desc='Use data type of first file (default).',                    argstr='-filetype', xor=_xor_format)
-    format_byte         = traits.Bool(desc='Write out byte data.',                                      argstr='-byte',     xor=_xor_format)
-    format_short        = traits.Bool(desc='Write out short integer data.',                             argstr='-short',    xor=_xor_format)
-    format_int          = traits.Bool(desc='Write out 32-bit integer data.',                            argstr='-int',      xor=_xor_format)
-    format_long         = traits.Bool(desc='Superseded by -int.',                                       argstr='-long',     xor=_xor_format)
-    format_float        = traits.Bool(desc='Write out single-precision floating-point data.',           argstr='-float',    xor=_xor_format)
-    format_double       = traits.Bool(desc='Write out double-precision floating-point data.',           argstr='-double',   xor=_xor_format)
-    format_signed       = traits.Bool(desc='Write signed integer data.',                                argstr='-signed',   xor=_xor_format)
-    format_unsigned     = traits.Bool(desc='Write unsigned integer data (default if type specified).',  argstr='-unsigned', xor=_xor_format) # FIXME mark with default=?
+    format_filetype     = traits.Bool(desc='Use data type of first file (default).',            argstr='-filetype', xor=_xor_format)
+    format_byte         = traits.Bool(desc='Write out byte data.',                              argstr='-byte',     xor=_xor_format)
+    format_short        = traits.Bool(desc='Write out short integer data.',                     argstr='-short',    xor=_xor_format)
+    format_int          = traits.Bool(desc='Write out 32-bit integer data.',                    argstr='-int',      xor=_xor_format)
+    format_long         = traits.Bool(desc='Superseded by -int.',                               argstr='-long',     xor=_xor_format)
+    format_float        = traits.Bool(desc='Write out single-precision floating-point data.',   argstr='-float',    xor=_xor_format)
+    format_double       = traits.Bool(desc='Write out double-precision floating-point data.',   argstr='-double',   xor=_xor_format)
+    format_signed       = traits.Bool(desc='Write signed integer data.',                        argstr='-signed',   xor=_xor_format)
+    format_unsigned     = traits.Bool(desc='Write unsigned integer data (default).',            argstr='-unsigned', xor=_xor_format)
 
     voxel_range = traits.Tuple(
                 traits.Int, traits.Int, argstr='-range %d %d',
@@ -863,16 +872,15 @@ class CalcInputSpec(CommandLineInputSpec):
                                 desc='Specify the maximum size of the internal buffers (in kbytes).',
                                 value=0,
                                 usedefault=False,
-                                argstr='-max_buffer_size_in_kb %d',)
+                                argstr='-max_buffer_size_in_kb %d')
 
     _xor_check_dimensions = ('check_dimensions', 'no_check_dimensions',)
 
-    check_dimensions    = traits.Bool(desc='Check that files have matching dimensions (default).', argstr='-check_dimensions',     xor=_xor_check_dimensions)
-    no_check_dimensions = traits.Bool(desc='Do not check that files have matching dimensions.',                              argstr='-nocheck_dimensions',   xor=_xor_check_dimensions)
+    check_dimensions    = traits.Bool(desc='Check that files have matching dimensions (default).',  argstr='-check_dimensions',     xor=_xor_check_dimensions)
+    no_check_dimensions = traits.Bool(desc='Do not check that files have matching dimensions.',     argstr='-nocheck_dimensions',   xor=_xor_check_dimensions)
 
-    # FIXME are ignore_nan and propagate_nan mutually exclusive?
+    # FIXME Is it sensible to use ignore_nan and propagate_nan at the same time? Document this.
     ignore_nan = traits.Bool(desc='Ignore invalid data (NaN) for accumulations.', argstr='-ignore_nan')
-
     propagate_nan = traits.Bool(desc='Invalid data in any file at a voxel produces a NaN (default).', argstr='-propagate_nan')
 
     # FIXME Double-check that these are mutually exclusive?
@@ -884,7 +892,7 @@ class CalcInputSpec(CommandLineInputSpec):
 
     _xor_expression = ('expression', 'expfile')
 
-    expression = traits.Str(desc='Expression to use in calculations.',    argstr='-expression %s', xor=_xor_expression, mandatory=True)
+    expression = traits.Str(desc='Expression to use in calculations.',    argstr='-expression \'%s\'', xor=_xor_expression, mandatory=True)
     expfile    = traits.File(desc='Name of file containing expression.',  argstr='-expfile %s',    xor=_xor_expression, mandatory=True)
 
     # FIXME test this one, the argstr will probably need tweaking, see _format_arg.
@@ -894,21 +902,29 @@ class CalcInputSpec(CommandLineInputSpec):
 
     eval_width = traits.Int(200, desc='Number of voxels to evaluate simultaneously.', argstr='-eval_width %s', usedefault=False)
 
-
 class CalcOutputSpec(TraitedSpec):
-    # FIXME Am I defining the output spec correctly?
-    output_file = File(
-                    desc='output file',
-                    exists=True,)
+    output_file = File(desc='output file', exists=True)
 
 class CalcTask(CommandLine):
+    """Compute an expression using MINC files as input.
+
+    Examples
+    --------
+
+    >>> from nipype.interfaces.minc import CalcTask
+    >>> from nipype.testing import mincfile, nonempty_minc_data
+
+    >>> file0 = nonempty_minc_data(0)
+    >>> file1 = nonempty_minc_data(1)
+    >>> calc = CalcTask(input_files=[file0, file1], output_file='/tmp/calc.mnc', expression='A[0] + A[1]', clobber=True) # add files together
+    >>> calc.run() # doctest: +SKIP
+    """
+
     input_spec  = CalcInputSpec
     output_spec = CalcOutputSpec
     _cmd = 'minccalc'
 
     def _list_outputs(self):
-        # FIXME seems generic, is this necessary?
         outputs = self.output_spec().get()
         outputs['output_file'] = self.inputs.output_file
         return outputs
-
