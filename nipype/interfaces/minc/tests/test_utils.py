@@ -257,4 +257,54 @@ def test_minccalc_sumsquares():
     remove(output_file)
 
     sum_squares = np.sum([x**2 for x in data], axis=0)
-    yield assert_true, np.max(np.abs(sum_sqares - data_minccalc_output)) < 1e-07
+    yield assert_true, np.max(np.abs(sum_squares - data_minccalc_output)) < 1e-06
+
+def test_minccalc_std():
+    expression_string = r"""s0 = s1 = s2 = 0;
+
+    for { i in [0:len(A)) } {
+        v=A[i];
+        if (!isnan(v)) {
+            s0 = s0 + 1;
+            s1 = s1 + v;
+            s2 = s2 + v*v;
+        }
+    };
+
+    if (s0 > 1) {
+        sqrt((s2 - s1*s1/s0) / (s0-1));
+    }
+    else {
+        NaN;
+    };
+    """
+
+    expression_file = create_empty_temp_file(suffix='.txt')
+    open(expression_file, 'w').write(expression_string)
+
+    np.random.seed(0) # FIXME fix the seed for tests?
+
+    shape = (1, 1)
+
+    nr_files = 1000
+
+    filenames = [create_empty_temp_file() for _ in range(nr_files)]
+    data      = [np.random.random(shape)  for _ in range(nr_files)]
+
+    for i in range(nr_files): write_minc(filenames[i], data[i])
+
+    output_file = create_empty_temp_file()
+
+    a = minc.CalcTask(input_files=filenames, output_file=output_file, clobber=True,
+                      expfile=expression_file)
+    a.run()
+
+    data_minccalc_output = read_minc(output_file)
+
+    data_std = np.std(np.array(data), axis=0)
+
+    for f in filenames: remove(f)
+    remove(output_file)
+    remove(expression_file)
+
+    yield assert_true, np.abs(data_std - data_minccalc_output) < 0.001
