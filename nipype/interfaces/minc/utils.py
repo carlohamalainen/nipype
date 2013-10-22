@@ -19,6 +19,10 @@ Author: Carlo Hamalainen <carlo@carlo-hamalainen.net>
 
 # FIXME Can we check the arguments to "-range min max" to avoid min > max?
 
+# FIXME change clobber default everywhere
+
+# FIXME output_file(s) should be optional, in line with the Nipype convention.
+
 from nipype.interfaces.base import (
     TraitedSpec,
     CommandLineInputSpec,
@@ -32,10 +36,39 @@ from nipype.interfaces.base import (
 )
 
 import os
+import os.path
 
 import warnings
 warn = warnings.warn
 warnings.filterwarnings('always', category=UserWarning)
+
+def aggregate_filename(files, new_suffix):
+    """
+    Try to work out a sensible name given a set of files that have
+    been combined in some way (e.g. averaged). If we can't work out a
+    sensible prefix, we use the first filename in the list.
+
+    Examples
+    --------
+
+    >>> import nipype.interfaces.minc as minc
+    >>> minc.utils.aggregate_filename(['/tmp/foo1.mnc', '/tmp/foo2.mnc', '/tmp/foo3.mnc'], 'averaged')
+    '/tmp/foo_averaged.mnc'
+
+    >>> minc.utils.aggregate_filename(['/tmp/foo1.mnc', '/tmp/blah1.mnc'], 'averaged')
+    '/tmp/foo1_averaged.mnc'
+
+    """
+
+    path            = os.path.split(files[0])[0]
+    names           = [os.path.splitext(os.path.split(x)[1])[0] for x in files]
+    common_prefix   = os.path.commonprefix(names)
+
+    if common_prefix == '':
+        return os.path.abspath(os.path.join(path, os.path.splitext(files[0])[0] + '_' + new_suffix + '.mnc'))
+    else:
+        return os.path.abspath(os.path.join(path, common_prefix + '_' + new_suffix + '.mnc'))
+
 
 class ExtractInputSpec(StdOutCommandLineInputSpec):
     input_file = File(
@@ -655,8 +688,7 @@ class AverageInputSpec(CommandLineInputSpec):
 
     output_file = File(
                     desc='output file',
-                    mandatory=True,
-                    genfile=False,
+                    genfile=True,
                     argstr='%s',
                     position=-1,)
 
@@ -664,7 +696,7 @@ class AverageInputSpec(CommandLineInputSpec):
 
     _xor_clobber = ('clobber', 'no_clobber')
 
-    clobber     = traits.Bool(desc='Overwrite existing file.',                  argstr='-clobber',      xor=_xor_clobber)
+    clobber     = traits.Bool(desc='Overwrite existing file.',                  argstr='-clobber',      xor=_xor_clobber, usedefault=True, default_value=True)
     no_clobber  = traits.Bool(desc='Don\'t overwrite existing file (default).', argstr='-noclobber',    xor=_xor_clobber)
 
     _xor_verbose = ('verbose', 'quiet',)
@@ -759,9 +791,27 @@ class AverageTask(CommandLine):
     output_spec = AverageOutputSpec
     _cmd = 'mincaverage'
 
+    def _gen_filename(self, name):
+        """
+        FIXME
+        """
+
+        if name == 'output_file':
+            output_file = self.inputs.output_file
+
+            if isdefined(output_file):
+                return os.path.abspath(output_file)
+            else:
+                return aggregate_filename(self.inputs.input_files, 'averaged')
+        else:
+            raise NotImplemented
+
+    def _gen_outfilename(self):
+        return self._gen_filename('output_file') # FIXME redundancy???
+
     def _list_outputs(self):
         outputs = self.output_spec().get()
-        outputs['output_file'] = os.path.abspath(self.inputs.output_file)
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
         return outputs
 
 class BlobInputSpec(CommandLineInputSpec):
