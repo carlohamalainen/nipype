@@ -413,11 +413,6 @@ class ConvertTask(CommandLine):
     output_spec = ConvertOutputSpec
     _cmd = 'mincconvert'
 
-    def _list_outputs(self):
-        outputs = self.output_spec().get()
-        outputs['output_file'] = self.inputs.output_file
-        return outputs
-
     def _gen_filename(self, name):
         if name == 'output_file':
             output_file = self.inputs.output_file
@@ -447,7 +442,7 @@ class CopyInputSpec(CommandLineInputSpec):
 
     output_file = File(
                     desc='output file',
-                    mandatory=True,
+                    genfile=True,
                     argstr='%s',
                     position=-1,)
 
@@ -482,9 +477,23 @@ class CopyTask(CommandLine):
     output_spec = CopyOutputSpec
     _cmd = 'minccopy'
 
+    def _gen_filename(self, name):
+        if name == 'output_file':
+            output_file = self.inputs.output_file
+
+            if isdefined(output_file):
+                return os.path.abspath(output_file)
+            else:
+                return aggregate_filename([self.inputs.input_file], 'copy_output')
+        else:
+            raise NotImplemented
+
+    def _gen_outfilename(self):
+        return self._gen_filename('output_file')
+
     def _list_outputs(self):
         outputs = self.output_spec().get()
-        outputs['output_file'] = self.inputs.output_file
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
         return outputs
 
 class ToEcatInputSpec(CommandLineInputSpec):
@@ -836,8 +845,7 @@ class BlobInputSpec(CommandLineInputSpec):
 
     output_file = File(
                     desc='output file',
-                    mandatory=True,
-                    genfile=False,
+                    genfile=True,
                     argstr='%s',
                     position=-1,)
 
@@ -866,9 +874,23 @@ class BlobTask(CommandLine):
     output_spec = BlobOutputSpec
     _cmd = 'mincblob'
 
+    def _gen_filename(self, name):
+        if name == 'output_file':
+            output_file = self.inputs.output_file
+
+            if isdefined(output_file):
+                return os.path.abspath(output_file)
+            else:
+                return aggregate_filename([self.inputs.input_file], 'blob')
+        else:
+            raise NotImplemented
+
+    def _gen_outfilename(self):
+        return self._gen_filename('output_file')
+
     def _list_outputs(self):
         outputs = self.output_spec().get()
-        outputs['output_file'] = self.inputs.output_file
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
         return outputs
 
 class CalcInputSpec(CommandLineInputSpec):
@@ -885,8 +907,7 @@ class CalcInputSpec(CommandLineInputSpec):
 
     output_file = File(
                     desc='output file',
-                    mandatory=True,
-                    genfile=False,
+                    genfile=True,
                     argstr='%s',
                     position=-1,)
 
@@ -986,7 +1007,21 @@ class CalcTask(CommandLine):
     output_spec = CalcOutputSpec
     _cmd = 'minccalc'
 
+    def _gen_filename(self, name):
+        if name == 'output_file':
+            output_file = self.inputs.output_file
+
+            if isdefined(output_file):
+                return os.path.abspath(output_file)
+            else:
+                return aggregate_filename([self.inputs.input_file], 'calc_output')
+        else:
+            raise NotImplemented
+
+    def _gen_outfilename(self):
+        return self._gen_filename('output_file')
+
     def _list_outputs(self):
         outputs = self.output_spec().get()
-        outputs['output_file'] = self.inputs.output_file
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
         return outputs
