@@ -19,8 +19,6 @@ Author: Carlo Hamalainen <carlo@carlo-hamalainen.net>
 
 # FIXME Can we check the arguments to "-range min max" to avoid min > max?
 
-# FIXME change clobber default everywhere
-
 # FIXME output_file(s) should be optional, in line with the Nipype convention.
 
 from nipype.interfaces.base import (
@@ -376,7 +374,7 @@ class ConvertInputSpec(CommandLineInputSpec):
 
     clobber = traits.Bool(
                 desc='Overwrite existing file.',
-                argstr='-clobber',)
+                argstr='-clobber', usedefault=True, default_value=True)
 
     two = traits.Bool(
                 desc='Create a MINC 2 output file.',
@@ -882,7 +880,7 @@ class CalcInputSpec(CommandLineInputSpec):
 
     _xor_clobber = ('clobber', 'no_clobber')
 
-    clobber     = traits.Bool(desc='Overwrite existing file.',                  argstr='-clobber',      xor=_xor_clobber)
+    clobber     = traits.Bool(desc='Overwrite existing file.',                  argstr='-clobber',      xor=_xor_clobber, usedefault=True, default_value=True)
     no_clobber  = traits.Bool(desc='Don\'t overwrite existing file (default).', argstr='-noclobber',    xor=_xor_clobber)
 
     _xor_verbose = ('verbose', 'quiet',)
@@ -966,7 +964,7 @@ class CalcTask(CommandLine):
 
     >>> file0 = nonempty_minc_data(0)
     >>> file1 = nonempty_minc_data(1)
-    >>> calc = CalcTask(input_files=[file0, file1], output_file='/tmp/calc.mnc', expression='A[0] + A[1]', clobber=True) # add files together
+    >>> calc = CalcTask(input_files=[file0, file1], output_file='/tmp/calc.mnc', expression='A[0] + A[1]') # add files together
     >>> calc.run() # doctest: +SKIP
     """
 
