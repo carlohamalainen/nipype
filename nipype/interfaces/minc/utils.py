@@ -21,6 +21,8 @@ Author: Carlo Hamalainen <carlo@carlo-hamalainen.net>
 
 # FIXME output_file(s) should be optional, in line with the Nipype convention.
 
+# FIXME check all interface .help() outputs for out_file vs output_file.
+
 from nipype.interfaces.base import (
     TraitedSpec,
     CommandLineInputSpec,
@@ -222,6 +224,7 @@ class ExtractTask(StdOutCommandLine):
     output_spec = ExtractOutputSpec
     _cmd = 'mincextract'
 
+    # FIXME Does this play nicely with a workflow?
     def _gen_outfilename(self):
         """
         If the user specified output_file then return that, otherwise
@@ -1025,3 +1028,69 @@ class CalcTask(CommandLine):
         outputs = self.output_spec().get()
         outputs['output_file'] = os.path.abspath(self._gen_outfilename())
         return outputs
+
+
+# FIXME mincbbox produces output like
+#
+#   -5.000000 -5.000000 -5.000000    4.800000 2.800000 8.800000
+#
+# so perhaps this would be better returned as a pair of Python
+# lists instead of sending to an output file?
+
+class BBoxInputSpec(StdOutCommandLineInputSpec):
+    input_file = File(
+                    desc='input file',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-2,)
+
+    output_file = File(
+                    desc='output file containing bounding box corners',
+                    position=-1)
+
+    threshold = traits.Int(0, desc='VIO_Real value threshold for bounding box. Default value: 0.', argstr='-threshold')
+
+    _xor_one_two = ('one_line', 'two_lines')
+
+    one_line  = traits.Bool(desc='Output on one line (default): start_x y z width_x y z', argstr='-one_line',  xor=_xor_one_two)
+    two_lines = traits.Bool(desc='Output on two lines: start_x y z \n width_x y z',       argstr='-two_lines', xor=_xor_one_two)
+
+    format_mincresample = traits.Bool(desc='Output format for mincresample: (-step x y z -start x y z -nelements x y z',    argstr='-mincresample')
+    format_mincreshape  = traits.Bool(desc='Output format for mincreshape: (-start x,y,z -count dx,dy,dz',                  argstr='-mincreshape')
+    format_minccrop     = traits.Bool(desc='Output format for minccrop: (-xlim x1 x2 -ylim y1 y2 -zlim z1 z2',              argstr='-minccrop')
+
+    # FIXME Not implemented, will clash with our parsing of the output?
+    # Command-specific options:
+    # Options for logging progress. Default = -verbose.
+    #  -verbose:      Write messages indicating progress
+    #  -quiet:        Do not write log messages
+    #  -debug:        Print out debug info.
+
+class BBoxOutputSpec(TraitedSpec):
+    output_file = File(desc='output file containing bounding box corners', exists=True)
+
+class BBoxTask(StdOutCommandLine):
+    """Determine a bounding box.
+
+    FIXME doctests
+    """
+
+    input_spec  = BBoxInputSpec
+    output_spec = BBoxOutputSpec
+    _cmd = 'mincbbox'
+
+    # FIXME Does this play nicely with a workflow?
+    def _gen_outfilename(self):
+        output_file = self.inputs.output_file
+
+        if isdefined(output_file):
+            return output_file
+        else:
+            return os.path.splitext(self.inputs.input_file)[0] + '_bbox.txt'
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
+
