@@ -1094,3 +1094,228 @@ class BBoxTask(StdOutCommandLine):
         outputs['output_file'] = os.path.abspath(self._gen_outfilename())
         return outputs
 
+
+
+class BeastInputSpec(CommandLineInputSpec):
+    """
+
+    TODO:
+
+    Command-specific options:
+     -verbose:          Enable verbose output.
+     -positive:         Specify mask of positive segmentation (inside mask) instead of the default mask.
+     -output_selection: Specify file to output selected files.
+     -count:            Specify file to output the patch count.
+     -mask:             Specify a segmentation mask instead of the the default mask.
+     -no_mask:          Do not apply a segmentation mask. Perform the segmentation over the entire image.
+     -no_positive:      Do not apply a positive mask.
+    Generic options for all commands:
+     -help:             Print summary of command-line options and abort
+     -version:          Print version number of program and exit
+    Copyright (C) 2011	Simon Fristed Eskildsen, Vladimir Fonov,
+                Pierrick Coupe, Jose V. Manjon
+
+    This program comes with ABSOLUTELY NO WARRANTY; for details type 'cat COPYING'.
+    This is free software, and you are welcome to redistribute it under certain
+    conditions; type 'cat COPYING' for details.
+
+    Usage: mincbeast [options] <library dir> <input> <output>
+           mincbeast -help
+
+    Get this example to work?
+
+    https://github.com/BIC-MNI/BEaST/blob/master/README.library
+
+
+        2.3 Source the minc-toolkit (if installed):
+        $ source /opt/minc/minc-toolkit-config.sh
+
+        2.4 Generate library by running:
+        $ beast_prepareADNIlib -flip <ADNI download directory> <BEaST library directory>
+        Example:
+        $ sudo beast_prepareADNIlib -flip Downloads/ADNI /opt/minc/share/beast-library-1.1
+
+        3. Test the setup
+        3.1 Normalize your data
+        $ beast_normalize -modeldir /opt/minc/share/icbm152_model_09c input.mnc normal.mnc normal.xfm
+        3.2 Run BEaST
+        $ mincbeast /opt/minc/share/beast-library-1.1 normal.mnc brainmask.mnc -conf /opt/minc/share/beast-library-1.1/default.2mm.conf -same_res
+    """
+
+    probability_map = traits.Bool(desc='Output the probability map instead of crisp mask.', argstr='-probability')
+    flip_images = traits.Bool(desc='Flip images around the mid-sagittal plane to increase patch count.', argstr='-flip')
+    load_moments = traits.Bool(desc='Do not calculate moments instead use precalculated library moments. (for optimization purposes)', argstr='-load_moments')
+    fill_holes = traits.Bool(desc='Fill holes in the binary output.', argstr='-fill')
+    median_filter = traits.Bool(desc='Apply a median filter on the probability map.', argstr='-median')
+    nlm_filter = traits.Bool(desc='Apply an NLM filter on the probability map (experimental).', argstr='-nlm_filter')
+
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
+
+    configuration_file = traits.File(desc='Specify configuration file.', argstr='-configuration %s')
+
+    voxel_size = traits.Int(4, desc='Specify voxel size for calculations (4, 2, or 1). Default value: 4. Assumes no multiscale. Use configuration file for multiscale.', argstr='-voxel_size %s')
+
+    abspath = traits.Bool(desc='File paths in the library are absolute (default is relative to library root).',
+                          argstr='-abspath', usedefault=True, default_value=True)
+
+    patch_size = traits.Int(1, desc='Specify patch size for single scale approach. Default value: 1.', argstr='-patch_size %s')
+
+    search_area = traits.Int(2, desc='Specify size of search area for single scale approach. Default value: 2.', argstr='-search_area %s')
+
+    confidence_level_alpha      = traits.Float(0.5, desc='Specify confidence level Alpha. Default value: 0.5',          argstr='-alpha %s')
+    smoothness_factor_beta      = traits.Float(0.5, desc='Specify smoothness factor Beta. Default value: 0.25',         argstr='-beta %s')
+    threshold_patch_selection   = traits.Float(0.95, desc='Specify threshold for patch selection. Default value: 0.95', argstr='-threshold %s')
+    number_selected_images      = traits.Int(20, desc='Specify number of selected images. Default value: 20',           argstr='-selection_num %s')
+
+    same_resolution = traits.Bool(desc='Output final mask with the same resolution as input file.', argstr='-same_resolution')
+
+    library_dir = traits.Directory(desc='library directory', position=-3, argstr='%s', mandatory=True)
+    input_file  = traits.File(desc='input file',             position=-2, argstr='%s', mandatory=True)
+    output_file = traits.File(desc='output file',            position=-1, argstr='%s', genfile=True)
+
+class BeastOutputSpec(TraitedSpec):
+    output_file = File(desc='output file in raw/text format', exists=True)
+
+class BeastTask(CommandLine):
+    """FIXME
+    """
+
+    input_spec  = BeastInputSpec
+    output_spec = BeastOutputSpec
+    _cmd = 'mincbeast'
+
+    # FIXME Does this play nicely with a workflow?
+    def _gen_outfilename(self):
+        output_file = self.inputs.output_file
+
+        if isdefined(output_file):
+            return output_file
+        else:
+            return os.path.splitext(self.inputs.input_file)[0] + '_mask.mnc'
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
+
+class PikInputSpec(CommandLineInputSpec):
+    input_file = File(
+                    desc='input file',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-2,)
+
+    output_file = File(
+                    desc='output file',
+                    argstr='%s',
+                    position=-1)
+
+    clobber = traits.Bool(
+                desc='Overwrite existing file.',
+                argstr='-clobber', usedefault=True, default_value=True)
+
+    # FIXME not implemented: --verbose
+    #                        --fake
+    #                        --lookup    ==> arguments to pass to minclookup
+
+    scale = traits.Int(2, desc='Scaling factor for resulting image, by default images are output at twice their original resolution.', argstr='--scale %s')
+
+    width = traits.Int(desc='Autoscale the resulting image to have a fixed image width (in pixels).', argstr='--width %s')
+
+    depth = traits.Enum(8, 16, desc='Bitdepth for resulting image 8 or 16 (MSB machines only!)', argstr='--depth %s')
+
+    _xor_title = ('title_string', 'title_with_filename')
+
+    title = traits.Either(
+                    traits.Bool(desc='Use input filename as title in resulting image.'),
+                    traits.Str(desc='Add a title to the resulting image.'),
+                    argstr='%s') # see _format_arg for actual arg string
+
+    title_size = traits.Int(desc='Font point size for the title.', argstr='--title_size %s', requires=['title'])
+
+    annotated_bar = traits.Bool(desc='create an annotated bar to match the image (use height of the output image)', argstr='--anot_bar')
+
+    # FIXME tuple of floats? Not voxel values? Man page doesn't specify.
+    minc_range = traits.Tuple(
+                    traits.Float, traits.Float,
+                    desc='Valid range of values for MINC file.',
+                    argstr='--range %s %s')
+
+    _xor_image_range = ('image_range', 'auto_range')
+
+    image_range = traits.Tuple(
+                    traits.Float, traits.Float,
+                    desc='Range of image values to use for pixel intensity.',
+                    argstr='--image_range %s %s',
+                    xor=_xor_image_range)
+
+    auto_range = traits.Bool(desc='Automatically determine image range using a 5 and 95% PcT. (histogram)', argstr='--auto_range', xor=_xor_image_range)
+
+    start = traits.Int(desc='Slice number to get. (note this is in voxel co-ordinates).', argstr='--slice %s') # FIXME Int is correct?
+
+    _xor_slice = ('slice_z', 'slice_y', 'slice_x')
+
+    slice_z = traits.Bool(desc='Get an axial/transverse (z) slice.',    argstr='-z', xor=_xor_slice)
+    slice_y = traits.Bool(desc='Get a coronal (y) slice.',              argstr='-y', xor=_xor_slice)
+    slice_x = traits.Bool(desc='Get a sagittal (x) slice.',             argstr='-x', xor=_xor_slice) # FIXME typo in man page? sagital?
+
+    triplanar = traits.Bool(desc='Create a triplanar view of the input file.', argstr='--triplanar')
+    tile_size = traits.Int(desc='Pixel size for each image in a triplanar.', argstr='--tilesize')
+
+    _xor_sagittal_offset = ('sagittal_offset', 'sagittal_offset_perc')
+
+    sagittal_offset = traits.Int(desc='Offset the sagittal slice from the centre.', argstr='--sagittal_offset')
+    sagittal_offset_perc = traits.Range(low=0, high=100,
+                        desc='Offset the sagittal slice by a percentage from the centre.',
+                        argstr='--sagittal_offset_perc %d',)
+
+    _xor_vertical_horizontal = ('vertical_triplanar_view', 'horizontal_triplanar_view')
+
+    vertical_triplanar_view   = traits.Bool(desc='Create a vertical triplanar view (Default).', argstr='--vertical',   xor=_xor_vertical_horizontal)
+    horizontal_triplanar_view = traits.Bool(desc='Create a horizontal triplanar view.',         argstr='--horizontal', xor=_xor_vertical_horizontal)
+
+class PikOutputSpec(TraitedSpec):
+    output_file = File(desc='output file in raw/text format', exists=True)
+
+class PikTask(CommandLine):
+    """FIXME
+    """
+
+    input_spec  = PikInputSpec
+    output_spec = PikOutputSpec
+    _cmd = 'mincpik'
+
+    # FIXME Does this play nicely with a workflow?
+    def _gen_outfilename(self):
+        # FIXME choose the appropriate extension
+        # based on the image type specified?
+        assert False
+        output_file = self.inputs.output_file
+
+        if isdefined(output_file):
+            return output_file
+        else:
+            return os.path.splitext(self.inputs.input_file)[0] + '.raw'
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
+
+    def _format_arg(self, name, spec, value):
+        if name == 'title':
+            if isinstance(value, bool) and value:
+                return '--title'
+            elif isinstance(value, str):
+                return '--title --title_text %s' % (value,)
+            else:
+                raise ValueError, 'Unknown value for "title" argument: ' + str(value)
+        return super(PikTask, self)._format_arg(name, spec, value)
+
+# TODO from volgenmodel:
+# mincnorm  ??? Not in my installation of MINC.
+# mincpik
+# mincblur
+# mincmath
+# mincresample
