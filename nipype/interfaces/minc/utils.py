@@ -722,10 +722,7 @@ class AverageInputSpec(CommandLineInputSpec):
 
     two = traits.Bool(desc='Produce a MINC 2.0 format output file.', argstr='-2')
 
-    _xor_clobber = ('clobber', 'no_clobber')
-
-    clobber     = traits.Bool(desc='Overwrite existing file.',                  argstr='-clobber',      xor=_xor_clobber, usedefault=True, default_value=True)
-    no_clobber  = traits.Bool(desc='Don\'t overwrite existing file (default).', argstr='-noclobber',    xor=_xor_clobber)
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', xor=_xor_clobber, usedefault=True, default_value=True)
 
     _xor_verbose = ('verbose', 'quiet',)
 
@@ -916,10 +913,7 @@ class CalcInputSpec(CommandLineInputSpec):
 
     two = traits.Bool(desc='Produce a MINC 2.0 format output file.', argstr='-2')
 
-    _xor_clobber = ('clobber', 'no_clobber')
-
-    clobber     = traits.Bool(desc='Overwrite existing file.',                  argstr='-clobber',      xor=_xor_clobber, usedefault=True, default_value=True)
-    no_clobber  = traits.Bool(desc='Don\'t overwrite existing file (default).', argstr='-noclobber',    xor=_xor_clobber)
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', xor=_xor_clobber, usedefault=True, default_value=True)
 
     _xor_verbose = ('verbose', 'quiet',)
 
