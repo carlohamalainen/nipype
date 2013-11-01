@@ -924,7 +924,7 @@ class CalcInputSpec(CommandLineInputSpec):
 
     filelist = traits.File(desc='Specify the name of a file containing input file names.', argstr='-filelist %s', mandatory=True, xor=_xor_input_files)
 
-    _xor_copy_header = ('copy_header, no_copy_header')
+    _xor_copy_header = ('copy_header', 'no_copy_header')
 
     copy_header     = traits.Bool(desc='Copy all of the header from the first file.',         argstr='-copy_header',   xor=_xor_copy_header)
     no_copy_header  = traits.Bool(desc='Do not copy all of the header from the first file.',  argstr='-nocopy_header', xor=_xor_copy_header)
