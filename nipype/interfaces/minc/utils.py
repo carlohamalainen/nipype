@@ -1200,6 +1200,11 @@ class PikInputSpec(CommandLineInputSpec):
                     argstr='%s',
                     position=-2,)
 
+    _xor_image_type = ('jpg', 'png')
+
+    jpg = traits.Bool(desc='Output a jpg file.',            xor=_xor_image_type)
+    png = traits.Bool(desc='Output a png file (default).',  xor=_xor_image_type)
+
     output_file = File(
                     desc='output file',
                     argstr='%s',
@@ -1270,7 +1275,7 @@ class PikInputSpec(CommandLineInputSpec):
     horizontal_triplanar_view = traits.Bool(desc='Create a horizontal triplanar view.',         argstr='--horizontal', xor=_xor_vertical_horizontal)
 
 class PikOutputSpec(TraitedSpec):
-    output_file = File(desc='output file in raw/text format', exists=True)
+    output_file = File(desc='output image', exists=True)
 
 class PikTask(CommandLine):
     """FIXME
@@ -1282,15 +1287,22 @@ class PikTask(CommandLine):
 
     # FIXME Does this play nicely with a workflow?
     def _gen_outfilename(self):
-        # FIXME choose the appropriate extension
-        # based on the image type specified?
-        assert False
         output_file = self.inputs.output_file
 
         if isdefined(output_file):
+            assert not isdefined(self.inputs.png) # FIXME make a warning instead?
+            assert not isdefined(self.inputs.jpg) # FIXME make a warning instead?
             return output_file
         else:
-            return os.path.splitext(self.inputs.input_file)[0] + '.raw'
+            b = os.path.splitext(self.inputs.input_file)[0]
+
+            if isdefined(self.inputs.png) and self.inputs.png:
+                return b + '.png'
+            elif isdefined(self.inputs.jpg) and self.inputs.jpg:
+                return b + '.jpg'
+            else:
+                # By default we'll write a png file.
+                return b + '.png'
 
     def _list_outputs(self):
         outputs = self.output_spec().get()
@@ -1306,6 +1318,19 @@ class PikTask(CommandLine):
             else:
                 raise ValueError, 'Unknown value for "title" argument: ' + str(value)
         return super(PikTask, self)._format_arg(name, spec, value)
+
+
+    @property
+    def cmdline(self):
+        output_file = self.inputs.output_file
+
+        if isdefined(output_file):
+            return super(PikTask, self).cmdline
+        else:
+            # FIXME this seems like a bit of a hack. Can we force output_file
+            # to show up in cmdline by default, even if it isn't specified in
+            # the instantiation of PikTask?
+            return '%s %s' % (super(PikTask, self).cmdline, self._gen_outfilename())
 
 # TODO from volgenmodel:
 # mincnorm  ??? Not in my installation of MINC.
