@@ -1332,6 +1332,118 @@ class PikTask(CommandLine):
             # the instantiation of PikTask?
             return '%s %s' % (super(PikTask, self).cmdline, self._gen_outfilename())
 
+"""
+Command-specific options:
+Program flags.
+Options for logging progress. Default = -verbose.
+ -verbose:     Write messages indicating progress
+ -quiet:       Do not write log messages
+ -debug:       Print out debug info.
+ -version:     Print out version info and exit.
+Generic options for all commands:
+ -help:        Print summary of command-line options and abort
+ -version:     Print version number of program and exit
+
+Usage: mincblur [<options>] <inputfile> <output_basename>
+       mincblur [-help]
+
+"""
+
+class BlurInputSpec(CommandLineInputSpec):
+    input_file = File(
+                    desc='input file',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-2,)
+
+    output_file_base = File(
+                    desc='output file base',
+                    position=-1)
+
+    clobber = traits.Bool(
+                desc='Overwrite existing file.',
+                argstr='-clobber', usedefault=True, default_value=True)
+
+    _xor_kernel = ('gaussian', 'rect')
+
+    gaussian = traits.Bool(desc='Use a gaussian smoothing kernel (default).', argstr='-gaussian', xor=_xor_kernel)
+    rect     = traits.Bool(desc='Use a rect (box) smoothing kernel.', argstr='-rect', xor=_xor_kernel)
+
+
+    gradient   = traits.Bool(desc='Create the gradient magnitude volume as well.', argstr='-gradient')
+    partial    = traits.Bool(desc='Create the partial derivative and gradient magnitude volumes as well.', argstr='-partial')
+    no_apodize = traits.Bool(desc='Do not apodize the data before blurring.', argstr='-no_apodize')
+
+    # FIXME Some of these are for particular options, requires=, mandatory=?...
+
+    full_width_half_max = traits.Int(0, desc='Full-width-half-maximum of gaussian kernel. Default value: 0.', argstr='-fwhm %s', usedefault=True) # FIXME check defaultvalue...
+
+    standard_dev = traits.Int(0, desc='Standard deviation of gaussian kernel. Default value: 0.', argstr='-standarddev %s', usedefault=True) # FIXME check defaultvalue...
+
+    full_width_half_max_3d = traits.Tuple(traits.Float, traits.Float, traits.Float, argstr='-3dfwhm %s %s %s', desc='Full-width-half-maximum of gaussian kernel. Default value: -1.79769e+308 -1.79769e+308 -1.79769e+308.')
+
+    dimensions = traits.Enum(1, 2, 3, desc='Number of dimensions to blur (either 1,2 or 3). Default value: 3.', argstr='-dimensions %s', default=3, usedefault=True) # FIXME check default...
+
+class BlurOutputSpec(TraitedSpec):
+    # FIXME not just one file here...
+    output_file = File(desc='FIXME', exists=True)
+
+class BlurTask(StdOutCommandLine):
+    """FIXME
+    """
+
+    input_spec  = BlurInputSpec
+    output_spec = BlurOutputSpec
+    _cmd = 'mincblur'
+
+
+    """
+    1)  Blur  an  input  volume with a 6mm fwhm isotropic Gaussian blurring
+    kernel:
+
+    mincblur -fwhm 6 input.mnc out_6
+
+    mincblur will create out_6_blur.mnc.
+
+    2) Calculate the blurred and gradient magnitude data:
+
+    mincblur -fwhm 6 -gradient input.mnc out_6
+
+    mincblur will create out_6_blur.mnc and out_6_dxyz.mnc
+
+    3) Calculate the blurred data, the partial derivative volumes  and  the
+    gradient magnitude for the same data:
+
+    mincblur -fwhm 6 -partial input.mnc out_6
+
+    mincblur   will   create  out_6_blur.mnc,  out_6_dx.mnc,  out_6_dy.mnc,
+    out_6_dz.mnc and out_6_dxyz.mnc
+    """
+
+    # FIXME Does this play nicely with a workflow?
+    def _gen_outfilename(self, suffix='blur'):
+        output_file_base = self.inputs.output_file_base
+
+        if isdefined(output_file_base):
+            return output_file_base + '.mnc'
+        else:
+            return os.path.splitext(self.inputs.input_file)[0] + '_' + suffix + '.mnc'
+
+    def fixme(self):
+        if isdefined(self.inputs.full_width_half_max):
+            o = self._gen_outfilename()
+            print '0 ==>', o
+
+            if isdefined(self.inputs.gradient):
+                print '1 ==>', self._gen_outfilename(suffix='dxyz')
+
+            if isdefined(self.inputs.partial):
+                print '2 ==>', self._gen_outfilename(suffix='dx')
+                print '3 ==>', self._gen_outfilename(suffix='dy')
+                print '4 ==>', self._gen_outfilename(suffix='dz')
+                print '5 ==>', self._gen_outfilename(suffix='dxyz')
+
 # TODO from volgenmodel:
 # mincnorm  ??? Not in my installation of MINC.
 # mincpik
