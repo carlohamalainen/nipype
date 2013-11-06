@@ -1419,7 +1419,6 @@ class BlurTask(StdOutCommandLine):
 
     >>> blur = BlurTask(input_file=minc3Dfile, fwhm=6, output_file_base='/tmp/out_6')
     >>> extract.run() # doctest: +SKIP
-    >>> print blur.cmdline
 
     mincblur will create /tmp/out_6_blur.mnc.
 
@@ -1427,7 +1426,6 @@ class BlurTask(StdOutCommandLine):
 
     >>> blur = BlurTask(input_file=minc3Dfile, fwhm=6, gradient=True, output_file_base='/tmp/out_6')
     >>> extract.run() # doctest: +SKIP
-    >>> print blur.cmdline
 
     will create /tmp/out_6_blur.mnc and /tmp/out_6_dxyz.mnc.
 
@@ -1436,7 +1434,6 @@ class BlurTask(StdOutCommandLine):
 
     >>> blur = BlurTask(input_file=minc3Dfile, fwhm=6, partial=True, output_file_base='/tmp/out_6')
     >>> extract.run() # doctest: +SKIP
-    >>> print blur.cmdline
 
     will create /tmp/out_6_blur.mnc, /tmp/out_6_dx.mnc,
     /tmp/out_6_dy.mnc, /tmp/out_6_dz.mnc and /tmp/out_6_dxyz.mnc.
