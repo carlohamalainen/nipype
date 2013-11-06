@@ -23,6 +23,8 @@ Author: Carlo Hamalainen <carlo@carlo-hamalainen.net>
 
 # FIXME check all interface .help() outputs for out_file vs output_file.
 
+# FIXME check that the _list_outputs functions do a return at the end.
+
 from nipype.interfaces.base import (
     TraitedSpec,
     CommandLineInputSpec,
@@ -211,12 +213,12 @@ class ExtractTask(StdOutCommandLine):
     --------
 
     >>> from nipype.interfaces.minc import ExtractTask
-    >>> from nipype.testing import mincfile
+    >>> from nipype.testing import minc2Dfile
 
-    >>> extract = ExtractTask(input_file=mincfile)
+    >>> extract = ExtractTask(input_file=minc2Dfile)
     >>> extract.run() # doctest: +SKIP
 
-    >>> extract = ExtractTask(input_file=mincfile, start=[3, 10, 5], count=[4, 4, 4]) # extract a 4x4x4 slab at offset [3, 10, 5]
+    >>> extract = ExtractTask(input_file=minc2Dfile, start=[3, 10, 5], count=[4, 4, 4]) # extract a 4x4x4 slab at offset [3, 10, 5]
     >>> extract.run() # doctest: +SKIP
     """
 
@@ -328,12 +330,12 @@ class ToRawTask(StdOutCommandLine):
     --------
 
     >>> from nipype.interfaces.minc import ToRawTask
-    >>> from nipype.testing import mincfile
+    >>> from nipype.testing import minc2Dfile
 
-    >>> toraw = ToRawTask(input_file=mincfile)
+    >>> toraw = ToRawTask(input_file=minc2Dfile)
     >>> toraw.run() # doctest: +SKIP
 
-    >>> toraw = ToRawTask(input_file=mincfile, write_range=(0, 100))
+    >>> toraw = ToRawTask(input_file=minc2Dfile, write_range=(0, 100))
     >>> toraw.run() # doctest: +SKIP
     """
 
@@ -406,8 +408,8 @@ class ConvertTask(CommandLine):
     --------
 
     >>> from nipype.interfaces.minc import ToRawTask
-    >>> from nipype.testing import mincfile
-    >>> c = ConvertTask(input_file=mincfile, output_file='/tmp/out.mnc', two=True) # Convert to MINC2 format.
+    >>> from nipype.testing import minc2Dfile
+    >>> c = ConvertTask(input_file=minc2Dfile, output_file='/tmp/out.mnc', two=True) # Convert to MINC2 format.
     >>> c.run() # doctest: +SKIP
     """
 
@@ -557,12 +559,12 @@ class ToEcatTask(CommandLine):
     --------
 
     >>> from nipype.interfaces.minc import ToEcatTask
-    >>> from nipype.testing import mincfile
+    >>> from nipype.testing import minc2Dfile
 
-    >>> c = ToEcatTask(input_file=mincfile)
+    >>> c = ToEcatTask(input_file=minc2Dfile)
     >>> c.run() # doctest: +SKIP
 
-    >>> c = ToEcatTask(input_file=mincfile, voxels_as_integers=True)
+    >>> c = ToEcatTask(input_file=minc2Dfile, voxels_as_integers=True)
     >>> c.run() # doctest: +SKIP
 
     """
@@ -658,12 +660,12 @@ class DumpTask(StdOutCommandLine):
     --------
 
     >>> from nipype.interfaces.minc import DumpTask
-    >>> from nipype.testing import mincfile
+    >>> from nipype.testing import minc2Dfile
 
-    >>> dump = DumpTask(input_file=mincfile)
+    >>> dump = DumpTask(input_file=minc2Dfile)
     >>> dump.run() # doctest: +SKIP
 
-    >>> dump = DumpTask(input_file=mincfile, output_file='/tmp/out.txt', precision=(3, 4))
+    >>> dump = DumpTask(input_file=minc2Dfile, output_file='/tmp/out.txt', precision=(3, 4))
     >>> dump.run() # doctest: +SKIP
 
     """
@@ -804,7 +806,7 @@ class AverageTask(CommandLine):
     --------
 
     >>> from nipype.interfaces.minc import DumpTask
-    >>> from nipype.testing import mincfile, nonempty_minc_data
+    >>> from nipype.testing import minc2Dfile, nonempty_minc_data
 
     >>> files = [nonempty_minc_data(i) for i in range(3)]
     >>> average = AverageTask(input_files=files, output_file='/tmp/tmp.mnc')
@@ -864,9 +866,9 @@ class BlobTask(CommandLine):
     --------
 
     >>> from nipype.interfaces.minc import BlobTask
-    >>> from nipype.testing import mincfile
+    >>> from nipype.testing import minc2Dfile
 
-    >>> blob = BlobTask(input_file=mincfile, output_file='/tmp/tmp.mnc', trace=True)
+    >>> blob = BlobTask(input_file=minc2Dfile, output_file='/tmp/tmp.mnc', trace=True)
     >>> blob.run() # doctest: +SKIP
     """
 
@@ -992,7 +994,7 @@ class CalcTask(CommandLine):
     --------
 
     >>> from nipype.interfaces.minc import CalcTask
-    >>> from nipype.testing import mincfile, nonempty_minc_data
+    >>> from nipype.testing import minc2Dfile, nonempty_minc_data
 
     >>> file0 = nonempty_minc_data(0)
     >>> file1 = nonempty_minc_data(1)
@@ -1332,24 +1334,14 @@ class PikTask(CommandLine):
             # the instantiation of PikTask?
             return '%s %s' % (super(PikTask, self).cmdline, self._gen_outfilename())
 
-"""
-Command-specific options:
-Program flags.
-Options for logging progress. Default = -verbose.
- -verbose:     Write messages indicating progress
- -quiet:       Do not write log messages
- -debug:       Print out debug info.
- -version:     Print out version info and exit.
-Generic options for all commands:
- -help:        Print summary of command-line options and abort
- -version:     Print version number of program and exit
-
-Usage: mincblur [<options>] <inputfile> <output_basename>
-       mincblur [-help]
-
-"""
-
 class BlurInputSpec(CommandLineInputSpec):
+    """ FIXME not implemented
+    -verbose:     Write messages indicating progress
+    -quiet:       Do not write log messages
+    -debug:       Print out debug info.
+    -version:     Print out version info and exit.
+    """
+
     input_file = File(
                     desc='input file',
                     exists=True,
@@ -1359,6 +1351,7 @@ class BlurInputSpec(CommandLineInputSpec):
 
     output_file_base = File(
                     desc='output file base',
+                    argstr='%s',
                     position=-1)
 
     clobber = traits.Bool(
@@ -1368,81 +1361,129 @@ class BlurInputSpec(CommandLineInputSpec):
     _xor_kernel = ('gaussian', 'rect')
 
     gaussian = traits.Bool(desc='Use a gaussian smoothing kernel (default).', argstr='-gaussian', xor=_xor_kernel)
-    rect     = traits.Bool(desc='Use a rect (box) smoothing kernel.', argstr='-rect', xor=_xor_kernel)
+    rect     = traits.Bool(desc='Use a rect (box) smoothing kernel.',         argstr='-rect',     xor=_xor_kernel)
 
+    gradient   = traits.Bool(desc='Create the gradient magnitude volume as well.',                          argstr='-gradient')
+    partial    = traits.Bool(desc='Create the partial derivative and gradient magnitude volumes as well.',  argstr='-partial')
 
-    gradient   = traits.Bool(desc='Create the gradient magnitude volume as well.', argstr='-gradient')
-    partial    = traits.Bool(desc='Create the partial derivative and gradient magnitude volumes as well.', argstr='-partial')
-    no_apodize = traits.Bool(desc='Do not apodize the data before blurring.', argstr='-no_apodize')
+    no_apodize = traits.Bool(desc='Do not apodize the data before blurring.',                               argstr='-no_apodize')
 
-    # FIXME Some of these are for particular options, requires=, mandatory=?...
+    _xor_main_options = ('fwhm', 'fwhm3d', 'standard_dev')
 
-    full_width_half_max = traits.Int(0, desc='Full-width-half-maximum of gaussian kernel. Default value: 0.', argstr='-fwhm %s', usedefault=True) # FIXME check defaultvalue...
+    fwhm = traits.Float(
+                0,
+                desc='Full-width-half-maximum of gaussian kernel. Default value: 0.',
+                argstr='-fwhm %s',
+                xor=_xor_main_options,
+                mandatory=True)
 
-    standard_dev = traits.Int(0, desc='Standard deviation of gaussian kernel. Default value: 0.', argstr='-standarddev %s', usedefault=True) # FIXME check defaultvalue...
+    standard_dev = traits.Float(
+                    0,
+                    desc='Standard deviation of gaussian kernel. Default value: 0.',
+                    argstr='-standarddev %s',
+                    xor=_xor_main_options,
+                    mandatory=True)
 
-    full_width_half_max_3d = traits.Tuple(traits.Float, traits.Float, traits.Float, argstr='-3dfwhm %s %s %s', desc='Full-width-half-maximum of gaussian kernel. Default value: -1.79769e+308 -1.79769e+308 -1.79769e+308.')
+    fwhm3d = traits.Tuple(
+                    traits.Float, traits.Float, traits.Float,
+                    argstr='-3dfwhm %s %s %s',
+                    desc='Full-width-half-maximum of gaussian kernel. Default value: -1.79769e+308 -1.79769e+308 -1.79769e+308.',
+                    xor=_xor_main_options,
+                    mandatory=True)
 
-    dimensions = traits.Enum(1, 2, 3, desc='Number of dimensions to blur (either 1,2 or 3). Default value: 3.', argstr='-dimensions %s', default=3, usedefault=True) # FIXME check default...
+    dimensions = traits.Enum(1, 2, 3, desc='Number of dimensions to blur (either 1,2 or 3). Default value: 3.', argstr='-dimensions %s', default=3)
 
 class BlurOutputSpec(TraitedSpec):
-    # FIXME not just one file here...
-    output_file = File(desc='FIXME', exists=True)
+    output_file = File(desc='Blurred output file.', exists=True)
+
+    gradient_dxyz   = File(desc='Gradient dxyz.')
+    partial_dx      = File(desc='Partial gradient dx.')
+    partial_dy      = File(desc='Partial gradient dy.')
+    partial_dz      = File(desc='Partial gradient dz.')
+    partial_dxyz    = File(desc='Partial gradient dxyz.')
 
 class BlurTask(StdOutCommandLine):
-    """FIXME
+    """
+    Convolve an input volume with a Gaussian blurring kernel of
+    user-defined width.  Optionally, the first partial derivatives
+    and the gradient magnitude volume can be calculated.
+
+    Examples
+    --------
+
+    >>> from nipype.interfaces.minc import BlurTask
+    >>> from nipype.testing import minc3Dfile
+
+    (1) Blur  an  input  volume with a 6mm fwhm isotropic Gaussian
+    blurring kernel:
+
+    >>> blur = BlurTask(input_file=minc3Dfile, fwhm=6, output_file_base='/tmp/out_6')
+    >>> extract.run() # doctest: +SKIP
+    >>> print blur.cmdline
+
+    mincblur will create /tmp/out_6_blur.mnc.
+
+    (2) Calculate the blurred and gradient magnitude data:
+
+    >>> blur = BlurTask(input_file=minc3Dfile, fwhm=6, gradient=True, output_file_base='/tmp/out_6')
+    >>> extract.run() # doctest: +SKIP
+    >>> print blur.cmdline
+
+    will create /tmp/out_6_blur.mnc and /tmp/out_6_dxyz.mnc.
+
+    (3) Calculate the blurred data, the partial derivative volumes
+    and  the gradient magnitude for the same data:
+
+    >>> blur = BlurTask(input_file=minc3Dfile, fwhm=6, partial=True, output_file_base='/tmp/out_6')
+    >>> extract.run() # doctest: +SKIP
+    >>> print blur.cmdline
+
+    will create /tmp/out_6_blur.mnc, /tmp/out_6_dx.mnc,
+    /tmp/out_6_dy.mnc, /tmp/out_6_dz.mnc and /tmp/out_6_dxyz.mnc.
     """
 
     input_spec  = BlurInputSpec
     output_spec = BlurOutputSpec
     _cmd = 'mincblur'
 
-
-    """
-    1)  Blur  an  input  volume with a 6mm fwhm isotropic Gaussian blurring
-    kernel:
-
-    mincblur -fwhm 6 input.mnc out_6
-
-    mincblur will create out_6_blur.mnc.
-
-    2) Calculate the blurred and gradient magnitude data:
-
-    mincblur -fwhm 6 -gradient input.mnc out_6
-
-    mincblur will create out_6_blur.mnc and out_6_dxyz.mnc
-
-    3) Calculate the blurred data, the partial derivative volumes  and  the
-    gradient magnitude for the same data:
-
-    mincblur -fwhm 6 -partial input.mnc out_6
-
-    mincblur   will   create  out_6_blur.mnc,  out_6_dx.mnc,  out_6_dy.mnc,
-    out_6_dz.mnc and out_6_dxyz.mnc
-    """
-
     # FIXME Does this play nicely with a workflow?
     def _gen_outfilename(self, suffix='blur'):
         output_file_base = self.inputs.output_file_base
 
         if isdefined(output_file_base):
-            return output_file_base + '.mnc'
+            return output_file_base + '_blur.mnc'
         else:
-            return os.path.splitext(self.inputs.input_file)[0] + '_' + suffix + '.mnc'
+            return os.path.splitext(self.inputs.input_file)[0] + '_bluroutput_' + suffix + '.mnc'
 
-    def fixme(self):
-        if isdefined(self.inputs.full_width_half_max):
-            o = self._gen_outfilename()
-            print '0 ==>', o
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+
+        output_file_base = self.inputs.output_file_base
+
+        if isdefined(output_file_base):
+            outputs['output_file'] = output_file_base + '_blur.mnc'
 
             if isdefined(self.inputs.gradient):
-                print '1 ==>', self._gen_outfilename(suffix='dxyz')
+                outputs['gradient_dxyz'] = output_file_base + '_dxyz.mnc'
 
             if isdefined(self.inputs.partial):
-                print '2 ==>', self._gen_outfilename(suffix='dx')
-                print '3 ==>', self._gen_outfilename(suffix='dy')
-                print '4 ==>', self._gen_outfilename(suffix='dz')
-                print '5 ==>', self._gen_outfilename(suffix='dxyz')
+                outputs['partial_dx']   = output_file_base + '_dx.mnc'
+                outputs['partial_dy']   = output_file_base + '_dy.mnc'
+                outputs['partial_dz']   = output_file_base + '_dz.mnc'
+                outputs['partial_dxyz'] = output_file_base + '_dxyz.mnc'
+        else:
+            outputs['output_file'] = self._gen_outfilename()
+
+            if isdefined(self.inputs.gradient):
+                outputs['gradient_dxyz'] = self._gen_outfilename(suffix='dxyz')
+
+            if isdefined(self.inputs.partial):
+                outputs['partial_dx']   = self._gen_outfilename(suffix='dx')
+                outputs['partial_dy']   = self._gen_outfilename(suffix='dy')
+                outputs['partial_dz']   = self._gen_outfilename(suffix='dz')
+                outputs['partial_dxyz'] = self._gen_outfilename(suffix='dxyz')
+
+        return outputs
 
 # TODO from volgenmodel:
 # mincnorm  ??? Not in my installation of MINC.
