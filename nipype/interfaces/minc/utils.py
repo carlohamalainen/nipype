@@ -25,6 +25,8 @@ Author: Carlo Hamalainen <carlo@carlo-hamalainen.net>
 
 # FIXME check that the _list_outputs functions do a return at the end.
 
+# FIXME factor out common definitions, e.g. max_buffer_size_in_kb?
+
 from nipype.interfaces.base import (
     TraitedSpec,
     CommandLineInputSpec,
@@ -648,7 +650,7 @@ class DumpInputSpec(StdOutCommandLineInputSpec):
                         traits.Int(),
                         traits.Tuple(traits.Int, traits.Int),
                         desc='Display floating-point values with less precision',
-                        argstr='%s',) # See _format_arg in DumP for actual formatting.
+                        argstr='%s',) # See _format_arg in Dump for actual formatting.
 
 class DumpOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
@@ -1481,9 +1483,216 @@ class Blur(StdOutCommandLine):
             # the instantiation of Pik?
             return '%s %s' % (super(Blur, self).cmdline, self._gen_output_base())
 
+"""
+Command-specific options:
+General options:
+ -dimension:             Specify a dimension along which we wish to perform a calculation.
+ -ignore_nan:            Ignore invalid data (NaN) for accumulations.
+ -propagate_nan:         Invalid data in any file at a voxel produces a NaN (default).
+ -nan:                   Output NaN when an illegal operation is done (default).
+ -zero:                  Output zero when an illegal operation is done.
+ -illegal_value:         Value to write out when an illegal operation is done.
+		Default value: 1.79769e+308
+Options for specifying constants:
+ -constant:              Specify a constant argument.
+		Default value: 1.79769e+308
+ -const:                 Synonym for -constant.
+		Default value: 1.79769e+308
+ -const2:                Specify two constant arguments.
+		Default value: 1.79769e+308 1.79769e+308
+Operations:
+ -invert:                Calculate 1/x at each voxel (use -constant for c/x).
+ -sqrt:                  Take square root of a volume.
+ -square:                Take square of a volume.
+ -abs:                   Take absolute value of a volume.
+ -max:                   Synonym for -maximum.
+ -maximum:               Find maximum of N volumes.
+ -minimum:               Find minimum of N volumes.
+ -exp:                   Calculate c2*exp(c1*x). The constants c1 and c2 default to 1.
+ -log:                   Calculate log(x/c2)/c1. The constants c1 and c2 default to 1.
+ -scale:                 Scale a volume: volume * c1 + c2.
+ -clamp:                 Clamp a volume to lie between two values.
+ -segment:               Segment a volume using range of -const2: within range = 1, outside range = 0.
+ -nsegment:              Opposite of -segment: within range = 0, outside range = 1.
+ -percentdiff:           Percent difference between 2 volumes, thresholded (const def=0.0).
+ -pd:                    Synonym for -percentdiff.
+ -isnan:                 Test for NaN values in vol1.
+ -nisnan:                Negation of -isnan.
+ -count_valid:           Count the number of valid values in N volumes.
+Generic options for all commands:
+ -help:                  Print summary of command-line options and abort
+ -version:               Print version number of program and exit
+
+Usage: mincmath [options] [<in1.mnc> ...] <out.mnc>
+       mincmath -help
+
+"""
+
+class MathInputSpec(CommandLineInputSpec):
+    """
+    FIXME Not implemented
+    -verbose:               Print out log messages (default).
+    -quiet:                 Do not print out log messages.
+    -debug:                 Print out debugging messages.
+
+    """
+
+    _xor_input_files = ('input_files', 'filelist')
+
+    input_files = InputMultiPath(
+                    traits.File,
+                    desc='input file(s) for calculation',
+                    exists=True,
+                    mandatory=True,
+                    sep=' ',
+                    argstr='%s',
+                    position=-2,
+                    xor=_xor_input_files)
+
+    filelist = traits.File(desc='Specify the name of a file containing input file names.', argstr='-filelist %s', exists=True, mandatory=True, xor=_xor_input_files)
+
+    clobber = traits.Bool(
+                desc='Overwrite existing file.',
+                argstr='-clobber', usedefault=True, default_value=True)
+
+    two = traits.Bool(
+                desc='Create a MINC 2 output file.',
+                argstr='-2',)
+
+    _xor_copy_header = ('copy_header', 'no_copy_header')
+
+    copy_header     = traits.Bool(desc='Copy all of the header from the first file (default for one file).',            argstr='-copy_header',   xor=_xor_copy_header)
+    no_copy_header  = traits.Bool(desc='Do not copy all of the header from the first file (default for many files)).',  argstr='-nocopy_header', xor=_xor_copy_header)
+
+    _xor_format = ('format_filetype', 'format_byte', 'format_short',
+                   'format_int', 'format_long', 'format_float', 'format_double',
+                   'format_signed', 'format_unsigned',)
+
+    format_filetype     = traits.Bool(desc='Use data type of first file (default).',            argstr='-filetype', xor=_xor_format)
+    format_byte         = traits.Bool(desc='Write out byte data.',                              argstr='-byte',     xor=_xor_format)
+    format_short        = traits.Bool(desc='Write out short integer data.',                     argstr='-short',    xor=_xor_format)
+    format_int          = traits.Bool(desc='Write out 32-bit integer data.',                    argstr='-int',      xor=_xor_format)
+    format_long         = traits.Bool(desc='Superseded by -int.',                               argstr='-long',     xor=_xor_format)
+    format_float        = traits.Bool(desc='Write out single-precision floating-point data.',   argstr='-float',    xor=_xor_format)
+    format_double       = traits.Bool(desc='Write out double-precision floating-point data.',   argstr='-double',   xor=_xor_format)
+    format_signed       = traits.Bool(desc='Write signed integer data.',                        argstr='-signed',   xor=_xor_format)
+    format_unsigned     = traits.Bool(desc='Write unsigned integer data (default).',            argstr='-unsigned', xor=_xor_format)
+
+    voxel_range = traits.Tuple(
+                traits.Int, traits.Int, argstr='-range %d %d',
+                desc='Valid range for output data.')
+
+    max_buffer_size_in_kb = traits.Range(
+                                low=0,
+                                desc='Specify the maximum size of the internal buffers (in kbytes).',
+                                value=4096,
+                                argstr='-max_buffer_size_in_kb %d',)
+
+    _xor_check_dimensions = ('check_dimensions', 'no_check_dimensions',)
+
+    check_dimensions    = traits.Bool(desc='Check that dimension info matches across files (default).', argstr='-check_dimensions',     xor=_xor_check_dimensions)
+    no_check_dimensions = traits.Bool(desc='Do not check dimension info.',                              argstr='-nocheck_dimensions',   xor=_xor_check_dimensions)
+
+    test_gt = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 > vol2 or vol1 > constant.',             argstr='%s')
+    test_lt = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 < vol2 or vol1 < constant.',             argstr='%s')
+    test_eq = traits.Either(traits.Bool(), traits.Float(), desc='Test for integer vol1 == vol2 or vol1 == constant.',   argstr='%s')
+    test_ne = traits.Either(traits.Bool(), traits.Float(), desc='Test for integer vol1 != vol2 or vol1 != const.',      argstr='%s')
+    test_ge = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 >= vol2 or vol1 >= const.',              argstr='%s')
+    test_le = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 <= vol2 or vol1 <= const.',              argstr='%s')
+
+    calc_and = traits.Bool(desc='Calculate vol1 && vol2 (&& ...).', argstr='-and')
+    calc_or  = traits.Bool(desc='Calculate vol1 || vol2 (|| ...).', argstr='-or')
+    calc_not = traits.Bool(desc='Calculate !vol1.',                 argstr='-not')
+
+    calc_add = traits.Either(traits.Bool(), traits.Float(), desc='Add N volumes or volume + constant.',         argstr='%s')
+    calc_sub = traits.Either(traits.Bool(), traits.Float(), desc='Subtract 2 volumes or volume - constant.',    argstr='%s')
+    calc_mul = traits.Either(traits.Bool(), traits.Float(), desc='Multiply N volumes or volume * constant.',    argstr='%s')
+    calc_div = traits.Either(traits.Bool(), traits.Float(), desc='Divide 2 volumes or volume / constant.',    argstr='%s')
+
+class MathOutputSpec(TraitedSpec):
+    output_file = File(desc='output file', exists=True)
+
+class Math(StdOutCommandLine):
+    input_spec  = MathInputSpec
+    output_spec = MathOutputSpec
+    _cmd = 'mincmath'
+
+    def _format_arg(self, name, spec, value):
+        if name == 'test_gt':
+            if isinstance(value, bool):
+                return '-gt'
+            elif isinstance(value, float):
+                return '-gt -const %s' % value
+            else:
+                raise ValueError, 'Invalid gt argument: ' + str(value)
+        if name == 'test_lt':
+            if isinstance(value, bool):
+                return '-lt'
+            elif isinstance(value, float):
+                return '-lt -const %s' % value
+            else:
+                raise ValueError, 'Invalid lt argument: ' + str(value)
+        if name == 'test_eq':
+            if isinstance(value, bool):
+                return '-eq'
+            elif isinstance(value, float):
+                return '-eq -const %s' % value
+            else:
+                raise ValueError, 'Invalid eq argument: ' + str(value)
+        if name == 'test_ne':
+            if isinstance(value, bool):
+                return '-ne'
+            elif isinstance(value, float):
+                return '-ne -const %s' % value
+            else:
+                raise ValueError, 'Invalid ne argument: ' + str(value)
+        if name == 'test_ge':
+            if isinstance(value, bool):
+                return '-ge'
+            elif isinstance(value, float):
+                return '-ge -const %s' % value
+            else:
+                raise ValueError, 'Invalid ge argument: ' + str(value)
+        if name == 'test_le':
+            if isinstance(value, bool):
+                return '-le'
+            elif isinstance(value, float):
+                return '-le -const %s' % value
+            else:
+                raise ValueError, 'Invalid le argument: ' + str(value)
+        if name == 'calc_add':
+            if isinstance(value, bool):
+                return '-add'
+            elif isinstance(value, float):
+                return '-add -const %s' % value
+            else:
+                raise ValueError, 'Invalid add argument: ' + str(value)
+        if name == 'calc_sub':
+            if isinstance(value, bool):
+                return '-sub'
+            elif isinstance(value, float):
+                return '-sub -const %s' % value
+            else:
+                raise ValueError, 'Invalid sub argument: ' + str(value)
+        if name == 'calc_mul':
+            if isinstance(value, bool):
+                return '-mult'
+            elif isinstance(value, float):
+                return '-mult -const %s' % value
+            else:
+                raise ValueError, 'Invalid mul argument: ' + str(value)
+        if name == 'calc_div':
+            if isinstance(value, bool):
+                return '-div'
+            elif isinstance(value, float):
+                return '-div -const %s' % value
+            else:
+                raise ValueError, 'Invalid div argument: ' + str(value)
+
+        return super(Math, self)._format_arg(name, spec, value)
+
 # TODO from volgenmodel:
 # mincnorm  ??? Not in my installation of MINC.
 # mincpik
-# mincblur
 # mincmath
 # mincresample
