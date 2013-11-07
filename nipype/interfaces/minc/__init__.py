@@ -7,7 +7,7 @@ Top-level namespace for minc.
 """
 
 from .base import (Info, check_minc, no_minc)
-from .utils import (ToRawTask, ConvertTask, CopyTask,
-                    ToEcatTask, DumpTask, AverageTask,
-                    CalcTask, ExtractTask, BlobTask,
-                    BlurTask)
+from .utils import (ToRaw, Convert, Copy,
+                    ToEcat, Dump, Average,
+                    Calc, Extract, Blob,
+                    Blur)

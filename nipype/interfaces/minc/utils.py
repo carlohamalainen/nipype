@@ -206,19 +206,19 @@ class ExtractInputSpec(StdOutCommandLineInputSpec):
 class ExtractOutputSpec(TraitedSpec):
     output_file = File(desc='output file in raw/text format', exists=True)
 
-class ExtractTask(StdOutCommandLine):
+class Extract(StdOutCommandLine):
     """Dump a hyperslab of MINC file data.
 
     Examples
     --------
 
-    >>> from nipype.interfaces.minc import ExtractTask
+    >>> from nipype.interfaces.minc import Extract
     >>> from nipype.testing import minc2Dfile
 
-    >>> extract = ExtractTask(input_file=minc2Dfile)
+    >>> extract = Extract(input_file=minc2Dfile)
     >>> extract.run() # doctest: +SKIP
 
-    >>> extract = ExtractTask(input_file=minc2Dfile, start=[3, 10, 5], count=[4, 4, 4]) # extract a 4x4x4 slab at offset [3, 10, 5]
+    >>> extract = Extract(input_file=minc2Dfile, start=[3, 10, 5], count=[4, 4, 4]) # extract a 4x4x4 slab at offset [3, 10, 5]
     >>> extract.run() # doctest: +SKIP
     """
 
@@ -322,20 +322,20 @@ class ToRawInputSpec(StdOutCommandLineInputSpec):
 class ToRawOutputSpec(TraitedSpec):
     output_file = File(desc='output file in raw format', exists=True)
 
-class ToRawTask(StdOutCommandLine):
+class ToRaw(StdOutCommandLine):
     """Dump a chunk of MINC file data. This program is largely
-    superceded by mincextract (see ExtractTask).
+    superceded by mincextract (see Extract).
 
     Examples
     --------
 
-    >>> from nipype.interfaces.minc import ToRawTask
+    >>> from nipype.interfaces.minc import ToRaw
     >>> from nipype.testing import minc2Dfile
 
-    >>> toraw = ToRawTask(input_file=minc2Dfile)
+    >>> toraw = ToRaw(input_file=minc2Dfile)
     >>> toraw.run() # doctest: +SKIP
 
-    >>> toraw = ToRawTask(input_file=minc2Dfile, write_range=(0, 100))
+    >>> toraw = ToRaw(input_file=minc2Dfile, write_range=(0, 100))
     >>> toraw.run() # doctest: +SKIP
     """
 
@@ -401,15 +401,15 @@ class ConvertInputSpec(CommandLineInputSpec):
 class ConvertOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
 
-class ConvertTask(CommandLine):
+class Convert(CommandLine):
     """convert between MINC 1 to MINC 2 format.
 
     Examples
     --------
 
-    >>> from nipype.interfaces.minc import ToRawTask
+    >>> from nipype.interfaces.minc import ToRaw
     >>> from nipype.testing import minc2Dfile
-    >>> c = ConvertTask(input_file=minc2Dfile, output_file='/tmp/out.mnc', two=True) # Convert to MINC2 format.
+    >>> c = Convert(input_file=minc2Dfile, output_file='/tmp/out.mnc', two=True) # Convert to MINC2 format.
     >>> c.run() # doctest: +SKIP
     """
 
@@ -466,7 +466,7 @@ class CopyInputSpec(CommandLineInputSpec):
 class CopyOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
 
-class CopyTask(CommandLine):
+class Copy(CommandLine):
     """
     Copy image values from one MINC file to another. Both the input
     and output files must exist, and the images in both files must
@@ -551,20 +551,20 @@ class ToEcatInputSpec(CommandLineInputSpec):
 class ToEcatOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
 
-class ToEcatTask(CommandLine):
+class ToEcat(CommandLine):
     """Convert a 2D image, a 3D volumes or a 4D dynamic volumes
     written in MINC file format to a 2D, 3D or 4D Ecat7 file.
 
     Examples
     --------
 
-    >>> from nipype.interfaces.minc import ToEcatTask
+    >>> from nipype.interfaces.minc import ToEcat
     >>> from nipype.testing import minc2Dfile
 
-    >>> c = ToEcatTask(input_file=minc2Dfile)
+    >>> c = ToEcat(input_file=minc2Dfile)
     >>> c.run() # doctest: +SKIP
 
-    >>> c = ToEcatTask(input_file=minc2Dfile, voxels_as_integers=True)
+    >>> c = ToEcat(input_file=minc2Dfile, voxels_as_integers=True)
     >>> c.run() # doctest: +SKIP
 
     """
@@ -648,24 +648,24 @@ class DumpInputSpec(StdOutCommandLineInputSpec):
                         traits.Int(),
                         traits.Tuple(traits.Int, traits.Int),
                         desc='Display floating-point values with less precision',
-                        argstr='%s',) # See _format_arg in DumPTask for actual formatting.
+                        argstr='%s',) # See _format_arg in DumP for actual formatting.
 
 class DumpOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
 
-class DumpTask(StdOutCommandLine):
-    """Dump a MINC file. Typically used in conjunction with mincgen (see GenTask).
+class Dump(StdOutCommandLine):
+    """Dump a MINC file. Typically used in conjunction with mincgen (see Gen).
 
     Examples
     --------
 
-    >>> from nipype.interfaces.minc import DumpTask
+    >>> from nipype.interfaces.minc import Dump
     >>> from nipype.testing import minc2Dfile
 
-    >>> dump = DumpTask(input_file=minc2Dfile)
+    >>> dump = Dump(input_file=minc2Dfile)
     >>> dump.run() # doctest: +SKIP
 
-    >>> dump = DumpTask(input_file=minc2Dfile, output_file='/tmp/out.txt', precision=(3, 4))
+    >>> dump = Dump(input_file=minc2Dfile, output_file='/tmp/out.txt', precision=(3, 4))
     >>> dump.run() # doctest: +SKIP
 
     """
@@ -682,7 +682,7 @@ class DumpTask(StdOutCommandLine):
                 return '-p %d,%d' % (value[0], value[1],)
             else:
                 raise ValueError, 'Invalid precision argument: ' + str(value)
-        return super(DumpTask, self)._format_arg(name, spec, value)
+        return super(Dump, self)._format_arg(name, spec, value)
 
     def _gen_outfilename(self):
         """
@@ -799,17 +799,17 @@ class AverageInputSpec(CommandLineInputSpec):
 class AverageOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
 
-class AverageTask(CommandLine):
+class Average(CommandLine):
     """Average a number of MINC files.
 
     Examples
     --------
 
-    >>> from nipype.interfaces.minc import DumpTask
+    >>> from nipype.interfaces.minc import Dump
     >>> from nipype.testing import minc2Dfile, nonempty_minc_data
 
     >>> files = [nonempty_minc_data(i) for i in range(3)]
-    >>> average = AverageTask(input_files=files, output_file='/tmp/tmp.mnc')
+    >>> average = Average(input_files=files, output_file='/tmp/tmp.mnc')
     >>> dump.run() # doctest: +SKIP
 
     """
@@ -859,16 +859,16 @@ class BlobInputSpec(CommandLineInputSpec):
 class BlobOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
 
-class BlobTask(CommandLine):
+class Blob(CommandLine):
     """Calculate blobs from minc deformation grids.
 
     Examples
     --------
 
-    >>> from nipype.interfaces.minc import BlobTask
+    >>> from nipype.interfaces.minc import Blob
     >>> from nipype.testing import minc2Dfile
 
-    >>> blob = BlobTask(input_file=minc2Dfile, output_file='/tmp/tmp.mnc', trace=True)
+    >>> blob = Blob(input_file=minc2Dfile, output_file='/tmp/tmp.mnc', trace=True)
     >>> blob.run() # doctest: +SKIP
     """
 
@@ -987,18 +987,18 @@ class CalcInputSpec(CommandLineInputSpec):
 class CalcOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
 
-class CalcTask(CommandLine):
+class Calc(CommandLine):
     """Compute an expression using MINC files as input.
 
     Examples
     --------
 
-    >>> from nipype.interfaces.minc import CalcTask
+    >>> from nipype.interfaces.minc import Calc
     >>> from nipype.testing import minc2Dfile, nonempty_minc_data
 
     >>> file0 = nonempty_minc_data(0)
     >>> file1 = nonempty_minc_data(1)
-    >>> calc = CalcTask(input_files=[file0, file1], output_file='/tmp/calc.mnc', expression='A[0] + A[1]') # add files together
+    >>> calc = Calc(input_files=[file0, file1], output_file='/tmp/calc.mnc', expression='A[0] + A[1]') # add files together
     >>> calc.run() # doctest: +SKIP
     """
 
@@ -1066,7 +1066,7 @@ class BBoxInputSpec(StdOutCommandLineInputSpec):
 class BBoxOutputSpec(TraitedSpec):
     output_file = File(desc='output file containing bounding box corners', exists=True)
 
-class BBoxTask(StdOutCommandLine):
+class BBox(StdOutCommandLine):
     """Determine a bounding box.
 
     FIXME doctests
@@ -1172,7 +1172,7 @@ class BeastInputSpec(CommandLineInputSpec):
 class BeastOutputSpec(TraitedSpec):
     output_file = File(desc='output file in raw/text format', exists=True)
 
-class BeastTask(CommandLine):
+class Beast(CommandLine):
     """FIXME
     """
 
@@ -1279,7 +1279,7 @@ class PikInputSpec(CommandLineInputSpec):
 class PikOutputSpec(TraitedSpec):
     output_file = File(desc='output image', exists=True)
 
-class PikTask(CommandLine):
+class Pik(CommandLine):
     """FIXME
     """
 
@@ -1319,7 +1319,7 @@ class PikTask(CommandLine):
                 return '--title --title_text %s' % (value,)
             else:
                 raise ValueError, 'Unknown value for "title" argument: ' + str(value)
-        return super(PikTask, self)._format_arg(name, spec, value)
+        return super(Pik, self)._format_arg(name, spec, value)
 
 
     @property
@@ -1327,12 +1327,12 @@ class PikTask(CommandLine):
         output_file = self.inputs.output_file
 
         if isdefined(output_file):
-            return super(PikTask, self).cmdline
+            return super(Pik, self).cmdline
         else:
             # FIXME this seems like a bit of a hack. Can we force output_file
             # to show up in cmdline by default, even if it isn't specified in
-            # the instantiation of PikTask?
-            return '%s %s' % (super(PikTask, self).cmdline, self._gen_outfilename())
+            # the instantiation of Pik?
+            return '%s %s' % (super(Pik, self).cmdline, self._gen_outfilename())
 
 class BlurInputSpec(CommandLineInputSpec):
     """ FIXME not implemented
@@ -1402,7 +1402,7 @@ class BlurOutputSpec(TraitedSpec):
     partial_dz      = File(desc='Partial gradient dz.')
     partial_dxyz    = File(desc='Partial gradient dxyz.')
 
-class BlurTask(StdOutCommandLine):
+class Blur(StdOutCommandLine):
     """
     Convolve an input volume with a Gaussian blurring kernel of
     user-defined width.  Optionally, the first partial derivatives
@@ -1411,20 +1411,20 @@ class BlurTask(StdOutCommandLine):
     Examples
     --------
 
-    >>> from nipype.interfaces.minc import BlurTask
+    >>> from nipype.interfaces.minc import Blur
     >>> from nipype.testing import minc3Dfile
 
     (1) Blur  an  input  volume with a 6mm fwhm isotropic Gaussian
     blurring kernel:
 
-    >>> blur = BlurTask(input_file=minc3Dfile, fwhm=6, output_file_base='/tmp/out_6')
+    >>> blur = Blur(input_file=minc3Dfile, fwhm=6, output_file_base='/tmp/out_6')
     >>> extract.run() # doctest: +SKIP
 
     mincblur will create /tmp/out_6_blur.mnc.
 
     (2) Calculate the blurred and gradient magnitude data:
 
-    >>> blur = BlurTask(input_file=minc3Dfile, fwhm=6, gradient=True, output_file_base='/tmp/out_6')
+    >>> blur = Blur(input_file=minc3Dfile, fwhm=6, gradient=True, output_file_base='/tmp/out_6')
     >>> extract.run() # doctest: +SKIP
 
     will create /tmp/out_6_blur.mnc and /tmp/out_6_dxyz.mnc.
@@ -1432,7 +1432,7 @@ class BlurTask(StdOutCommandLine):
     (3) Calculate the blurred data, the partial derivative volumes
     and  the gradient magnitude for the same data:
 
-    >>> blur = BlurTask(input_file=minc3Dfile, fwhm=6, partial=True, output_file_base='/tmp/out_6')
+    >>> blur = Blur(input_file=minc3Dfile, fwhm=6, partial=True, output_file_base='/tmp/out_6')
     >>> extract.run() # doctest: +SKIP
 
     will create /tmp/out_6_blur.mnc, /tmp/out_6_dx.mnc,

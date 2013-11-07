@@ -77,7 +77,7 @@ def test_mincaverage_basic():
     write_minc(file1, data1)
     write_minc(file2, data2)
 
-    a = minc.AverageTask(input_files=[file1, file2], output_file=output_file, clobber=True)
+    a = minc.Average(input_files=[file1, file2], output_file=output_file, clobber=True)
     a.run()
 
     data_avg_minc = read_minc(output_file)
@@ -113,7 +113,7 @@ def test_mincaverage_filelist():
     write_minc(file1, data1)
     write_minc(file2, data2)
 
-    a = minc.AverageTask(filelist=filelist, output_file=output_file, clobber=True, format_double=True)
+    a = minc.Average(filelist=filelist, output_file=output_file, clobber=True, format_double=True)
     a.run()
 
     data_avg_minc = read_minc(output_file)
@@ -133,7 +133,7 @@ def test_mincextract_ascii():
     input_file  = example_data('minc/minc_test_2D_00.mnc')
     output_file = create_empty_temp_file(suffix='.raw')
 
-    e = minc.ExtractTask(input_file=input_file, output_file=output_file)
+    e = minc.Extract(input_file=input_file, output_file=output_file)
     e.run()
 
     # remove(output_file)
@@ -152,7 +152,7 @@ def test_mincextract_bytes():
     input_file  = example_data('minc/minc_test_2D_00.mnc')
     output_file = create_empty_temp_file(suffix='.raw')
 
-    e = minc.ExtractTask(input_file=input_file, output_file=output_file, write_byte=True)
+    e = minc.Extract(input_file=input_file, output_file=output_file, write_byte=True)
     e.run()
 
     # remove(output_file)
@@ -184,7 +184,7 @@ def test_minccalc_add():
     write_minc(file1, data1)
     write_minc(file2, data2)
 
-    a = minc.CalcTask(input_files=[file1, file2], output_file=output_file, clobber=True,
+    a = minc.Calc(input_files=[file1, file2], output_file=output_file, clobber=True,
                       expression='A[0] + A[1]')
     a.run()
 
@@ -216,7 +216,7 @@ def test_minccalc_sub():
     write_minc(file1, data1)
     write_minc(file2, data2)
 
-    a = minc.CalcTask(input_files=[file1, file2], output_file=output_file, clobber=True,
+    a = minc.Calc(input_files=[file1, file2], output_file=output_file, clobber=True,
                       expression='A[0] - A[1]')
     a.run()
 
@@ -247,7 +247,7 @@ def test_minccalc_sumsquares():
 
     output_file = create_empty_temp_file()
 
-    a = minc.CalcTask(input_files=filenames, output_file=output_file, clobber=True,
+    a = minc.Calc(input_files=filenames, output_file=output_file, clobber=True,
                       expression='total = 0; for {i in [0:(len(A)-1)]} { total = total + A[i]^2 }; total')
     a.run()
 
@@ -295,7 +295,7 @@ def test_minccalc_std():
 
     output_file = create_empty_temp_file()
 
-    a = minc.CalcTask(input_files=filenames, output_file=output_file, clobber=True,
+    a = minc.Calc(input_files=filenames, output_file=output_file, clobber=True,
                       expfile=expression_file)
     a.run()
 
