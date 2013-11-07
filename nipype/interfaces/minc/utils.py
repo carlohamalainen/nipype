@@ -1443,44 +1443,43 @@ class Blur(StdOutCommandLine):
     output_spec = BlurOutputSpec
     _cmd = 'mincblur'
 
-    # FIXME Does this play nicely with a workflow?
-    def _gen_outfilename(self, suffix='blur'):
+    def _gen_output_base(self):
         output_file_base = self.inputs.output_file_base
 
         if isdefined(output_file_base):
-            return output_file_base + '_blur.mnc'
+            return output_file_base
         else:
-            return os.path.splitext(self.inputs.input_file)[0] + '_bluroutput_' + suffix + '.mnc'
+            return os.path.splitext(self.inputs.input_file)[0] + '_bluroutput'
 
     def _list_outputs(self):
         outputs = self.output_spec().get()
 
+        output_file_base = self._gen_output_base()
+
+        outputs['output_file'] = output_file_base + '_blur.mnc'
+
+        if isdefined(self.inputs.gradient):
+            outputs['gradient_dxyz'] = output_file_base + '_dxyz.mnc'
+
+        if isdefined(self.inputs.partial):
+            outputs['partial_dx']   = output_file_base + '_dx.mnc'
+            outputs['partial_dy']   = output_file_base + '_dy.mnc'
+            outputs['partial_dz']   = output_file_base + '_dz.mnc'
+            outputs['partial_dxyz'] = output_file_base + '_dxyz.mnc'
+
+        return outputs
+
+    @property
+    def cmdline(self):
         output_file_base = self.inputs.output_file_base
 
         if isdefined(output_file_base):
-            outputs['output_file'] = output_file_base + '_blur.mnc'
-
-            if isdefined(self.inputs.gradient):
-                outputs['gradient_dxyz'] = output_file_base + '_dxyz.mnc'
-
-            if isdefined(self.inputs.partial):
-                outputs['partial_dx']   = output_file_base + '_dx.mnc'
-                outputs['partial_dy']   = output_file_base + '_dy.mnc'
-                outputs['partial_dz']   = output_file_base + '_dz.mnc'
-                outputs['partial_dxyz'] = output_file_base + '_dxyz.mnc'
+            return super(Blur, self).cmdline
         else:
-            outputs['output_file'] = self._gen_outfilename()
-
-            if isdefined(self.inputs.gradient):
-                outputs['gradient_dxyz'] = self._gen_outfilename(suffix='dxyz')
-
-            if isdefined(self.inputs.partial):
-                outputs['partial_dx']   = self._gen_outfilename(suffix='dx')
-                outputs['partial_dy']   = self._gen_outfilename(suffix='dy')
-                outputs['partial_dz']   = self._gen_outfilename(suffix='dz')
-                outputs['partial_dxyz'] = self._gen_outfilename(suffix='dxyz')
-
-        return outputs
+            # FIXME this seems like a bit of a hack. Can we force output_file
+            # to show up in cmdline by default, even if it isn't specified in
+            # the instantiation of Pik?
+            return '%s %s' % (super(Blur, self).cmdline, self._gen_output_base())
 
 # TODO from volgenmodel:
 # mincnorm  ??? Not in my installation of MINC.
