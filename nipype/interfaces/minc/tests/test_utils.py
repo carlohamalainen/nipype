@@ -9,6 +9,8 @@ from nipype.interfaces.minc import check_minc, no_minc
 import numpy as np
 import hashlib
 
+from nipype.interfaces.base import (isdefined)
+
 def create_empty_temp_file(suffix='.mnc'):
     """
     Create an empty temporary file with the given suffix. It is the caller's
@@ -308,3 +310,73 @@ def test_minccalc_std():
     remove(expression_file)
 
     yield assert_true, np.abs(data_std - data_minccalc_output) < 0.001
+
+def test_mincblur_basic():
+    """
+    Blur a file.
+    """
+
+    np.random.seed(0) # FIXME fix the seed for tests?
+
+    file1 = create_empty_temp_file()
+
+    shape = (40, 30, 50)
+
+    data1 = np.random.random(shape)
+
+    write_minc(file1, data1)
+
+    b = minc.Blur(input_file=file1, fwhm=1)
+
+    r = b.run()
+
+    outputs = r.outputs.get()
+
+    output_blur = read_minc(outputs['output_file'])
+
+    for f in outputs.values():
+        if isdefined(f): remove(f)
+
+    # FIXME Fairly crude test - check the average of the output.
+    # Will this cause problems on different architectures/compilers/etc?
+    yield assert_true, np.average(output_blur) - 0.19848914388   < 1e-10
+    yield assert_true, np.std(output_blur)     - 0.173123419395  < 1e-10
+
+def test_mincblur_partial():
+    """
+    Blur a file and calculate partial derivatives.
+    """
+
+    np.random.seed(0) # FIXME fix the seed for tests?
+
+    file1 = create_empty_temp_file()
+
+    shape = (40, 30, 50)
+
+    data1 = np.random.random(shape)
+
+    write_minc(file1, data1)
+
+    b = minc.Blur(input_file=file1, fwhm=1, partial=True)
+
+    r = b.run()
+
+    outputs = r.outputs.get()
+
+    output_blur = read_minc(outputs['output_file'])
+    output_dxyz = read_minc(outputs['partial_dxyz'])
+    output_dx   = read_minc(outputs['partial_dx'])
+    output_dy   = read_minc(outputs['partial_dy'])
+    output_dz   = read_minc(outputs['partial_dz'])
+
+    for f in outputs.values():
+        if isdefined(f): remove(f)
+
+    # FIXME Fairly crude test - check the average of the output.
+    # Will this cause problems on different architectures/compilers/etc?
+    yield assert_true, np.average(output_blur) -  0.19848914388     < 1e-10
+    yield assert_true, np.std(output_blur)     -  0.173123419395    < 1e-10
+    yield assert_true, np.average(output_dxyz) -  0.211823779297    < 1e-10
+    yield assert_true, np.average(output_dx)   - -1.11356467009e-05 < 1e-10
+    yield assert_true, np.average(output_dy)   - -1.33981078863e-05 < 1e-10
+    yield assert_true, np.average(output_dz)   - -8.20965766907e-06 < 1e-10
