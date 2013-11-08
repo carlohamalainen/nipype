@@ -1548,6 +1548,11 @@ class MathInputSpec(CommandLineInputSpec):
                     position=-2,
                     xor=_xor_input_files)
 
+    output_file = File(
+                    desc='output file',
+                    argstr='%s',
+                    position=-1)
+
     filelist = traits.File(desc='Specify the name of a file containing input file names.', argstr='-filelist %s', exists=True, mandatory=True, xor=_xor_input_files)
 
     clobber = traits.Bool(
@@ -1656,6 +1661,25 @@ class Math(StdOutCommandLine):
                     raise ValueError, 'Argument should be a bool or const, but got: %s' % t
         return super(Math, self)._parse_inputs()
 
+    def _gen_outfilename(self):
+        output_file = self.inputs.output_file
+
+        if isdefined(output_file):
+            return os.path.abspath(output_file)
+        else:
+            return aggregate_filename(self.inputs.input_files, 'mincmath_output')
+
+    @property
+    def cmdline(self):
+        output_file = self.inputs.output_file
+
+        if isdefined(output_file):
+            return super(Math, self).cmdline
+        else:
+            # FIXME this seems like a bit of a hack. Can we force output_file
+            # to show up in cmdline by default, even if it isn't specified in
+            # the instantiation of Math?
+            return '%s %s' % (super(Math, self).cmdline, self._gen_outfilename())
 
 # TODO from volgenmodel:
 # mincnorm  ??? Not in my installation of MINC.
