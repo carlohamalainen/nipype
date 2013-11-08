@@ -378,13 +378,8 @@ class ConvertInputSpec(CommandLineInputSpec):
                     argstr='%s',
                     position=-1,)
 
-    clobber = traits.Bool(
-                desc='Overwrite existing file.',
-                argstr='-clobber', usedefault=True, default_value=True)
-
-    two = traits.Bool(
-                desc='Create a MINC 2 output file.',
-                argstr='-2',)
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
+    two = traits.Bool(desc='Create a MINC 2 output file.', argstr='-2')
 
     template = traits.Bool(
                 desc='Create a template file. The dimensions, variables, and attributes of the input file are preserved but all data it set to zero.',
@@ -709,14 +704,16 @@ class AverageInputSpec(CommandLineInputSpec):
     _xor_input_files = ('input_files', 'filelist')
 
     input_files = InputMultiPath(
-                    traits.File,
-                    desc='input file(s) for averaging',
-                    exists=True,
-                    mandatory=True,
-                    sep=' ',
-                    argstr='%s',
-                    position=-2,
-                    xor=_xor_input_files)
+                        traits.File,
+                        desc='input file(s)',
+                        exists=True,
+                        mandatory=True,
+                        sep=' ',
+                        argstr='%s',
+                        position=-2,
+                        xor=_xor_input_files)
+
+    filelist = traits.File(desc='Specify the name of a file containing input file names.', argstr='-filelist %s', exists=True, mandatory=True, xor=_xor_input_files)
 
     output_file = File(
                     desc='output file',
@@ -724,7 +721,7 @@ class AverageInputSpec(CommandLineInputSpec):
                     argstr='%s',
                     position=-1,)
 
-    two = traits.Bool(desc='Produce a MINC 2.0 format output file.', argstr='-2')
+    two = traits.Bool(desc='Create a MINC 2 output file.', argstr='-2')
 
     clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
 
@@ -734,8 +731,6 @@ class AverageInputSpec(CommandLineInputSpec):
     quiet   = traits.Bool(desc='Do not print out log messages.',    argstr='-quiet',    xor=_xor_verbose)
 
     debug   = traits.Bool(desc='Print out debugging messages.', argstr='-debug')
-
-    filelist = traits.File(desc='Specify the name of a file containing input file names.', argstr='-filelist %s', exists=True, mandatory=True, xor=_xor_input_files)
 
     _xor_check_dimensions = ('check_dimensions', 'no_check_dimensions',)
 
@@ -915,7 +910,7 @@ class CalcInputSpec(CommandLineInputSpec):
                     argstr='%s',
                     position=-1,)
 
-    two = traits.Bool(desc='Produce a MINC 2.0 format output file.', argstr='-2')
+    two = traits.Bool(desc='Create a MINC 2 output file.', argstr='-2')
 
     clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
 
@@ -1214,9 +1209,7 @@ class PikInputSpec(CommandLineInputSpec):
                     argstr='%s',
                     position=-1)
 
-    clobber = traits.Bool(
-                desc='Overwrite existing file.',
-                argstr='-clobber', usedefault=True, default_value=True)
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
 
     # FIXME not implemented: --verbose
     #                        --fake
@@ -1356,9 +1349,7 @@ class BlurInputSpec(CommandLineInputSpec):
                     argstr='%s',
                     position=-1)
 
-    clobber = traits.Bool(
-                desc='Overwrite existing file.',
-                argstr='-clobber', usedefault=True, default_value=True)
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
 
     _xor_kernel = ('gaussian', 'rect')
 
@@ -1555,13 +1546,9 @@ class MathInputSpec(CommandLineInputSpec):
 
     filelist = traits.File(desc='Specify the name of a file containing input file names.', argstr='-filelist %s', exists=True, mandatory=True, xor=_xor_input_files)
 
-    clobber = traits.Bool(
-                desc='Overwrite existing file.',
-                argstr='-clobber', usedefault=True, default_value=True)
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
 
-    two = traits.Bool(
-                desc='Create a MINC 2 output file.',
-                argstr='-2',)
+    two = traits.Bool(desc='Create a MINC 2 output file.', argstr='-2')
 
     _xor_copy_header = ('copy_header', 'no_copy_header')
 
