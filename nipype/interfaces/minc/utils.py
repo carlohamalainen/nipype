@@ -1592,23 +1592,23 @@ class MathInputSpec(CommandLineInputSpec):
     check_dimensions    = traits.Bool(desc='Check that dimension info matches across files (default).', argstr='-check_dimensions',     xor=_xor_check_dimensions)
     no_check_dimensions = traits.Bool(desc='Do not check dimension info.',                              argstr='-nocheck_dimensions',   xor=_xor_check_dimensions)
 
-    test_gt = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 > vol2 or vol1 > constant.',             argstr='%s')
-    test_lt = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 < vol2 or vol1 < constant.',             argstr='%s')
-    test_eq = traits.Either(traits.Bool(), traits.Float(), desc='Test for integer vol1 == vol2 or vol1 == constant.',   argstr='%s')
-    test_ne = traits.Either(traits.Bool(), traits.Float(), desc='Test for integer vol1 != vol2 or vol1 != const.',      argstr='%s')
-    test_ge = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 >= vol2 or vol1 >= const.',              argstr='%s')
-    test_le = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 <= vol2 or vol1 <= const.',              argstr='%s')
+    test_gt = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 > vol2 or vol1 > constant.',             argstr='-gt')
+    test_lt = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 < vol2 or vol1 < constant.',             argstr='-lt')
+    test_eq = traits.Either(traits.Bool(), traits.Float(), desc='Test for integer vol1 == vol2 or vol1 == constant.',   argstr='-eq')
+    test_ne = traits.Either(traits.Bool(), traits.Float(), desc='Test for integer vol1 != vol2 or vol1 != const.',      argstr='-ne')
+    test_ge = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 >= vol2 or vol1 >= const.',              argstr='-ge')
+    test_le = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 <= vol2 or vol1 <= const.',              argstr='-le')
 
     calc_and = traits.Bool(desc='Calculate vol1 && vol2 (&& ...).', argstr='-and')
     calc_or  = traits.Bool(desc='Calculate vol1 || vol2 (|| ...).', argstr='-or')
     calc_not = traits.Bool(desc='Calculate !vol1.',                 argstr='-not')
 
-    calc_add = traits.Either(traits.Bool(), traits.Float(), desc='Add N volumes or volume + constant.',         argstr='%s')
-    calc_sub = traits.Either(traits.Bool(), traits.Float(), desc='Subtract 2 volumes or volume - constant.',    argstr='%s')
-    calc_mul = traits.Either(traits.Bool(), traits.Float(), desc='Multiply N volumes or volume * constant.',    argstr='%s')
-    calc_div = traits.Either(traits.Bool(), traits.Float(), desc='Divide 2 volumes or volume / constant.',    argstr='%s')
+    calc_add = traits.Either(traits.Bool(), traits.Float(), desc='Add N volumes or volume + constant.',         argstr='-add')
+    calc_sub = traits.Either(traits.Bool(), traits.Float(), desc='Subtract 2 volumes or volume - constant.',    argstr='-sub')
+    calc_mul = traits.Either(traits.Bool(), traits.Float(), desc='Multiply N volumes or volume * constant.',    argstr='-mult')
+    calc_div = traits.Either(traits.Bool(), traits.Float(), desc='Divide 2 volumes or volume / constant.',      argstr='-div')
 
-    invert = traits.Either(traits.Bool(), traits.Float(), desc='Calculate 1/x at each voxel (use -constant for c/x).', argstr='%s')
+    invert = traits.Either(traits.Bool(), traits.Float(), desc='Calculate 1/x at each voxel (use -constant for c/x).', argstr='-invert')
 
     bool_or_const_traits = [ 'test_gt', 'test_lt', 'test_eq', 'test_ne', 'test_ge', 'test_le',
                              'calc_add', 'calc_sub', 'calc_mul', 'calc_div',
@@ -1624,95 +1624,27 @@ class Math(StdOutCommandLine):
     _cmd = 'mincmath'
 
     def _format_arg(self, name, spec, value):
-        if name == 'test_gt':
-            if isinstance(value, bool):
-                return '-gt'
+        if name in self.input_spec.bool_or_const_traits:
+            t = self.inputs.__getattribute__(name)
+
+            if isinstance(value, bool) and value:
+                return spec.argstr
+            elif isinstance(value, bool) and not value:
+                raise ValueError, 'Does not make sense to specify %s=False' % (name,)
             elif isinstance(value, float):
-                return '-gt -const %s' % value
+                return '%s -const %s' % (spec.argstr, value,)
             else:
-                raise ValueError, 'Invalid gt argument: ' + str(value)
-        if name == 'test_lt':
-            if isinstance(value, bool):
-                return '-lt'
-            elif isinstance(value, float):
-                return '-lt -const %s' % value
-            else:
-                raise ValueError, 'Invalid lt argument: ' + str(value)
-        if name == 'test_eq':
-            if isinstance(value, bool):
-                return '-eq'
-            elif isinstance(value, float):
-                return '-eq -const %s' % value
-            else:
-                raise ValueError, 'Invalid eq argument: ' + str(value)
-        if name == 'test_ne':
-            if isinstance(value, bool):
-                return '-ne'
-            elif isinstance(value, float):
-                return '-ne -const %s' % value
-            else:
-                raise ValueError, 'Invalid ne argument: ' + str(value)
-        if name == 'test_ge':
-            if isinstance(value, bool):
-                return '-ge'
-            elif isinstance(value, float):
-                return '-ge -const %s' % value
-            else:
-                raise ValueError, 'Invalid ge argument: ' + str(value)
-        if name == 'test_le':
-            if isinstance(value, bool):
-                return '-le'
-            elif isinstance(value, float):
-                return '-le -const %s' % value
-            else:
-                raise ValueError, 'Invalid le argument: ' + str(value)
-        if name == 'calc_add':
-            if isinstance(value, bool):
-                return '-add'
-            elif isinstance(value, float):
-                return '-add -const %s' % value
-            else:
-                raise ValueError, 'Invalid add argument: ' + str(value)
-        if name == 'calc_sub':
-            if isinstance(value, bool):
-                return '-sub'
-            elif isinstance(value, float):
-                return '-sub -const %s' % value
-            else:
-                raise ValueError, 'Invalid sub argument: ' + str(value)
-        if name == 'calc_mul':
-            if isinstance(value, bool):
-                return '-mult'
-            elif isinstance(value, float):
-                return '-mult -const %s' % value
-            else:
-                raise ValueError, 'Invalid mul argument: ' + str(value)
-        if name == 'calc_div':
-            if isinstance(value, bool):
-                return '-div'
-            elif isinstance(value, float):
-                return '-div -const %s' % value
-            else:
-                raise ValueError, 'Invalid div argument: ' + str(value)
-        if name == 'invert':
-            if isinstance(value, bool):
-                return '-invert'
-            elif isinstance(value, float):
-                return '-invert -const %s' % value
-            else:
-                raise ValueError, 'Invalid invert argument: ' + str(value)
+                raise ValueError, 'Invalid %s argument: %s' % (name, value,)
 
         return super(Math, self)._format_arg(name, spec, value)
 
     def _parse_inputs(self):
-        """A number of the command line options expect precisely one or two files,
-        so check for this condition on the input_files trait.
+        """A number of the command line options expect precisely one or two files.
         """
 
         for n in self.input_spec.bool_or_const_traits:
             t = self.inputs.__getattribute__(n)
 
-            print n, t
             if isdefined(t):
                 if isinstance(t, bool):
                     if len(self.inputs.input_files) != 2:
