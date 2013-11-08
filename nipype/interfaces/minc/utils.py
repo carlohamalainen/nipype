@@ -1501,7 +1501,6 @@ Options for specifying constants:
  -const2:                Specify two constant arguments.
 		Default value: 1.79769e+308 1.79769e+308
 Operations:
- -invert:                Calculate 1/x at each voxel (use -constant for c/x).
  -sqrt:                  Take square root of a volume.
  -square:                Take square of a volume.
  -abs:                   Take absolute value of a volume.
@@ -1609,6 +1608,13 @@ class MathInputSpec(CommandLineInputSpec):
     calc_mul = traits.Either(traits.Bool(), traits.Float(), desc='Multiply N volumes or volume * constant.',    argstr='%s')
     calc_div = traits.Either(traits.Bool(), traits.Float(), desc='Divide 2 volumes or volume / constant.',    argstr='%s')
 
+    invert = traits.Either(traits.Bool(), traits.Float(), desc='Calculate 1/x at each voxel (use -constant for c/x).', argstr='%s')
+
+    bool_or_const_traits = [ 'test_gt', 'test_lt', 'test_eq', 'test_ne', 'test_ge', 'test_le',
+                             'calc_add', 'calc_sub', 'calc_mul', 'calc_div',
+                             'invert',
+                           ]
+
 class MathOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
 
@@ -1688,8 +1694,36 @@ class Math(StdOutCommandLine):
                 return '-div -const %s' % value
             else:
                 raise ValueError, 'Invalid div argument: ' + str(value)
+        if name == 'invert':
+            if isinstance(value, bool):
+                return '-invert'
+            elif isinstance(value, float):
+                return '-invert -const %s' % value
+            else:
+                raise ValueError, 'Invalid invert argument: ' + str(value)
 
         return super(Math, self)._format_arg(name, spec, value)
+
+    def _parse_inputs(self):
+        """A number of the command line options expect precisely one or two files,
+        so check for this condition on the input_files trait.
+        """
+
+        for n in self.input_spec.bool_or_const_traits:
+            t = self.inputs.__getattribute__(n)
+
+            print n, t
+            if isdefined(t):
+                if isinstance(t, bool):
+                    if len(self.inputs.input_files) != 2:
+                        raise ValueError, 'Due to the %s option we expected 2 files but input_files is of length %d' % (n, len(self.inputs.input_files),)
+                elif isinstance(t, float):
+                    if len(self.inputs.input_files) != 1:
+                        raise ValueError, 'Due to the %s option we expected 2 files but input_files is of length %d' % (n, len(self.inputs.input_files),)
+                else:
+                    raise ValueError, 'Argument should be a bool or const, but got: %s' % t
+        return super(Math, self)._parse_inputs()
+
 
 # TODO from volgenmodel:
 # mincnorm  ??? Not in my installation of MINC.
