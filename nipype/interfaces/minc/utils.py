@@ -1477,13 +1477,6 @@ class Blur(StdOutCommandLine):
 """
 Command-specific options:
 General options:
- -dimension:             Specify a dimension along which we wish to perform a calculation.
- -ignore_nan:            Ignore invalid data (NaN) for accumulations.
- -propagate_nan:         Invalid data in any file at a voxel produces a NaN (default).
- -nan:                   Output NaN when an illegal operation is done (default).
- -zero:                  Output zero when an illegal operation is done.
- -illegal_value:         Value to write out when an illegal operation is done.
-		Default value: 1.79769e+308
 Options for specifying constants:
  -constant:              Specify a constant argument.
 		Default value: 1.79769e+308
@@ -1492,14 +1485,6 @@ Options for specifying constants:
  -const2:                Specify two constant arguments.
 		Default value: 1.79769e+308 1.79769e+308
 Operations:
- -sqrt:                  Take square root of a volume.
- -square:                Take square of a volume.
- -abs:                   Take absolute value of a volume.
- -max:                   Synonym for -maximum.
- -maximum:               Find maximum of N volumes.
- -minimum:               Find minimum of N volumes.
- -exp:                   Calculate c2*exp(c1*x). The constants c1 and c2 default to 1.
- -log:                   Calculate log(x/c2)/c1. The constants c1 and c2 default to 1.
  -scale:                 Scale a volume: volume * c1 + c2.
  -clamp:                 Clamp a volume to lie between two values.
  -segment:               Segment a volume using range of -const2: within range = 1, outside range = 0.
@@ -1606,6 +1591,38 @@ class MathInputSpec(CommandLineInputSpec):
                              'calc_add', 'calc_sub', 'calc_mul', 'calc_div',
                              'invert',
                            ]
+
+    dimension = traits.Str(desc='Specify a dimension along which we wish to perform a calculation.', argstr='-dimension')
+
+    # FIXME Is it sensible to use ignore_nan and propagate_nan at the same time? Document this.
+    ignore_nan = traits.Bool(desc='Ignore invalid data (NaN) for accumulations.', argstr='-ignore_nan')
+    propagate_nan = traits.Bool(desc='Invalid data in any file at a voxel produces a NaN (default).', argstr='-propagate_nan')
+
+    # FIXME Double-check that these are mutually exclusive?
+    _xor_nan_zero_illegal = ('output_nan', 'output_zero', 'output_illegal_value')
+
+    output_nan      = traits.Bool(desc='Output NaN when an illegal operation is done (default).',                           argstr='-nan',              xor=_xor_nan_zero_illegal)
+    output_zero     = traits.Bool(desc='Output zero when an illegal operation is done.',                                    argstr='-zero',             xor=_xor_nan_zero_illegal)
+    output_illegal  = traits.Bool(desc='Value to write out when an illegal operation is done. Default value: 1.79769e+308', argstr='-illegal_value',    xor=_xor_nan_zero_illegal)
+
+    # FIXME A whole bunch of the parameters will be mutually exclusive, e.g. surely can't do sqrt and abs at the same time?
+
+    sqrt   = traits.Bool(desc='Take square root of a volume.', argstr='-sqrt')
+    square = traits.Bool(desc='Take square of a volume.', argstr='-square')
+    abs = traits.Bool(desc='Take absolute value of a volume.', argstr='-abs')
+
+    single_volume_traits = [ 'take_sqrt', 'square', 'abs' ] # FIXME enforce this in _parse_inputs
+
+    maximum = traits.Bool(desc='Find maximum of N volumes.', argstr='-maximum')
+    minimum = traits.Bool(desc='Find minimum of N volumes.', argstr='-minimum')
+
+    exp = traits.Tuple(
+                traits.Float, traits.Float, argstr='-exp -const2 %s %s',
+                desc='Calculate c2*exp(c1*x). Both constants must be specified.')
+
+    log = traits.Tuple(
+                traits.Float, traits.Float, argstr='-log -const2 %s %s',
+                desc='Calculate log(x/c2)/c1. The constants c1 and c2 default to 1.')
 
 class MathOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
