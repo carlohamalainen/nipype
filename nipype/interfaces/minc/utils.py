@@ -1474,35 +1474,6 @@ class Blur(StdOutCommandLine):
             # the instantiation of Pik?
             return '%s %s' % (super(Blur, self).cmdline, self._gen_output_base())
 
-"""
-Command-specific options:
-General options:
-Options for specifying constants:
- -constant:              Specify a constant argument.
-		Default value: 1.79769e+308
- -const:                 Synonym for -constant.
-		Default value: 1.79769e+308
- -const2:                Specify two constant arguments.
-		Default value: 1.79769e+308 1.79769e+308
-Operations:
- -scale:                 Scale a volume: volume * c1 + c2.
- -clamp:                 Clamp a volume to lie between two values.
- -segment:               Segment a volume using range of -const2: within range = 1, outside range = 0.
- -nsegment:              Opposite of -segment: within range = 0, outside range = 1.
- -percentdiff:           Percent difference between 2 volumes, thresholded (const def=0.0).
- -pd:                    Synonym for -percentdiff.
- -isnan:                 Test for NaN values in vol1.
- -nisnan:                Negation of -isnan.
- -count_valid:           Count the number of valid values in N volumes.
-Generic options for all commands:
- -help:                  Print summary of command-line options and abort
- -version:               Print version number of program and exit
-
-Usage: mincmath [options] [<in1.mnc> ...] <out.mnc>
-       mincmath -help
-
-"""
-
 class MathInputSpec(CommandLineInputSpec):
     """
     FIXME Not implemented
@@ -1611,7 +1582,9 @@ class MathInputSpec(CommandLineInputSpec):
     square = traits.Bool(desc='Take square of a volume.', argstr='-square')
     abs = traits.Bool(desc='Take absolute value of a volume.', argstr='-abs')
 
-    single_volume_traits = [ 'take_sqrt', 'square', 'abs' ] # FIXME enforce this in _parse_inputs
+    single_volume_traits = [ 'take_sqrt', 'square', 'abs', 'log',
+                             'scale', 'clamp', 'segment', 'nsegment',
+                             'isnan', 'isnan' ] # FIXME enforce this in _parse_inputs and check for other members
 
     maximum = traits.Bool(desc='Find maximum of N volumes.', argstr='-maximum')
     minimum = traits.Bool(desc='Find minimum of N volumes.', argstr='-minimum')
@@ -1623,6 +1596,33 @@ class MathInputSpec(CommandLineInputSpec):
     log = traits.Tuple(
                 traits.Float, traits.Float, argstr='-log -const2 %s %s',
                 desc='Calculate log(x/c2)/c1. The constants c1 and c2 default to 1.')
+
+    scale = traits.Tuple(
+                traits.Float, traits.Float, argstr='-scale -const2 %s %s',
+                desc='Scale a volume: volume * c1 + c2.')
+
+    clamp = traits.Tuple(
+                traits.Float, traits.Float, argstr='-clamp -const2 %s %s',
+                desc='Clamp a volume to lie between two values.')
+
+    segment = traits.Tuple(
+                traits.Float, traits.Float, argstr='-segment -const2 %s %s',
+                desc='Segment a volume using range of -const2: within range = 1, outside range = 0.')
+
+    nsegment = traits.Tuple(
+                traits.Float, traits.Float, argstr='-nsegment -const2 %s %s',
+                desc='Opposite of -segment: within range = 0, outside range = 1.')
+
+    isnan = traits.Bool(desc='Test for NaN values in vol1.', argstr='-isnan')
+
+    nisnan = traits.Bool(desc='Negation of -isnan.', argstr='-nisnan')
+
+    two_volume_traits = ['percentdiff'] # FIXME enforce this in _parse_inputs and check for other members.
+
+    percentdiff = traits.Float(desc='Percent difference between 2 volumes, thresholded (const def=0.0).', argstr='-percentdiff')
+
+    count_valid = traits.Bool(desc='Count the number of valid values in N volumes.', argstr='-count_valid')
+
 
 class MathOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
@@ -1660,9 +1660,24 @@ class Math(StdOutCommandLine):
                         raise ValueError, 'Due to the %s option we expected 2 files but input_files is of length %d' % (n, len(self.inputs.input_files),)
                 elif isinstance(t, float):
                     if len(self.inputs.input_files) != 1:
-                        raise ValueError, 'Due to the %s option we expected 2 files but input_files is of length %d' % (n, len(self.inputs.input_files),)
+                        raise ValueError, 'Due to the %s option we expected 1 file but input_files is of length %d' % (n, len(self.inputs.input_files),)
                 else:
                     raise ValueError, 'Argument should be a bool or const, but got: %s' % t
+
+        for n in self.input_spec.single_volume_traits:
+            t = self.inputs.__getattribute__(n)
+
+            if isdefined(t):
+                if len(self.inputs.input_files) != 1:
+                    raise ValueError, 'Due to the %s option we expected 1 file but input_files is of length %d' % (n, len(self.inputs.input_files),)
+
+        for n in self.input_spec.two_volume_traits:
+            t = self.inputs.__getattribute__(n)
+
+            if isdefined(t):
+                if len(self.inputs.input_files) != 2:
+                    raise ValueError, 'Due to the %s option we expected 2 files but input_files is of length %d' % (n, len(self.inputs.input_files),)
+
         return super(Math, self)._parse_inputs()
 
     def _gen_outfilename(self):
