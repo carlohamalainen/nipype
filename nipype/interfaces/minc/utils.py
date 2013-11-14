@@ -1582,7 +1582,7 @@ class MathInputSpec(CommandLineInputSpec):
     square = traits.Bool(desc='Take square of a volume.', argstr='-square')
     abs = traits.Bool(desc='Take absolute value of a volume.', argstr='-abs')
 
-    single_volume_traits = [ 'take_sqrt', 'square', 'abs', 'log',
+    single_volume_traits = [ 'sqrt', 'square', 'abs', 'log',
                              'scale', 'clamp', 'segment', 'nsegment',
                              'isnan', 'isnan' ] # FIXME enforce this in _parse_inputs and check for other members
 

@@ -79,7 +79,7 @@ def test_mincaverage_basic():
     write_minc(file1, data1)
     write_minc(file2, data2)
 
-    a = minc.Average(input_files=[file1, file2], output_file=output_file, clobber=True)
+    a = minc.Average(input_files=[file1, file2], output_file=output_file)
     a.run()
 
     data_avg_minc = read_minc(output_file)
@@ -115,7 +115,7 @@ def test_mincaverage_filelist():
     write_minc(file1, data1)
     write_minc(file2, data2)
 
-    a = minc.Average(filelist=filelist, output_file=output_file, clobber=True, format_double=True)
+    a = minc.Average(filelist=filelist, output_file=output_file, format_double=True)
     a.run()
 
     data_avg_minc = read_minc(output_file)
@@ -186,8 +186,7 @@ def test_minccalc_add():
     write_minc(file1, data1)
     write_minc(file2, data2)
 
-    a = minc.Calc(input_files=[file1, file2], output_file=output_file, clobber=True,
-                      expression='A[0] + A[1]')
+    a = minc.Calc(input_files=[file1, file2], output_file=output_file, expression='A[0] + A[1]')
     a.run()
 
     data_minccalc_output = read_minc(output_file)
@@ -218,8 +217,7 @@ def test_minccalc_sub():
     write_minc(file1, data1)
     write_minc(file2, data2)
 
-    a = minc.Calc(input_files=[file1, file2], output_file=output_file, clobber=True,
-                      expression='A[0] - A[1]')
+    a = minc.Calc(input_files=[file1, file2], output_file=output_file, expression='A[0] - A[1]')
     a.run()
 
     data_minccalc_output = read_minc(output_file)
@@ -249,7 +247,7 @@ def test_minccalc_sumsquares():
 
     output_file = create_empty_temp_file()
 
-    a = minc.Calc(input_files=filenames, output_file=output_file, clobber=True,
+    a = minc.Calc(input_files=filenames, output_file=output_file,
                       expression='total = 0; for {i in [0:(len(A)-1)]} { total = total + A[i]^2 }; total')
     a.run()
 
@@ -261,6 +259,7 @@ def test_minccalc_sumsquares():
     sum_squares = np.sum([x**2 for x in data], axis=0)
     yield assert_true, np.max(np.abs(sum_squares - data_minccalc_output)) < 1e-06
 
+@skipif(no_minc)
 def test_minccalc_std():
     expression_string = r"""s0 = s1 = s2 = 0;
 
@@ -297,7 +296,7 @@ def test_minccalc_std():
 
     output_file = create_empty_temp_file()
 
-    a = minc.Calc(input_files=filenames, output_file=output_file, clobber=True,
+    a = minc.Calc(input_files=filenames, output_file=output_file,
                       expfile=expression_file)
     a.run()
 
@@ -311,6 +310,7 @@ def test_minccalc_std():
 
     yield assert_true, np.abs(data_std - data_minccalc_output) < 0.001
 
+@skipif(no_minc)
 def test_mincblur_basic():
     """
     Blur a file.
@@ -342,6 +342,7 @@ def test_mincblur_basic():
     yield assert_true, np.average(output_blur) - 0.19848914388   < 1e-10
     yield assert_true, np.std(output_blur)     - 0.173123419395  < 1e-10
 
+@skipif(no_minc)
 def test_mincblur_partial():
     """
     Blur a file and calculate partial derivatives.
@@ -380,3 +381,35 @@ def test_mincblur_partial():
     yield assert_true, np.average(output_dx)   - -1.11356467009e-05 < 1e-10
     yield assert_true, np.average(output_dy)   - -1.33981078863e-05 < 1e-10
     yield assert_true, np.average(output_dz)   - -8.20965766907e-06 < 1e-10
+
+@skipif(no_minc)
+def test_mincmath_add():
+    """
+    Test mincmath, add two files together.
+    """
+
+    np.random.seed(0) # FIXME fix the seed for tests?
+
+    file1 = create_empty_temp_file()
+    file2 = create_empty_temp_file()
+    output_file = create_empty_temp_file()
+
+    shape = (40, 30)
+
+    data1 = np.random.random(shape)
+    data2 = np.random.random(shape)
+
+    write_minc(file1, data1)
+    write_minc(file2, data2)
+
+    a = minc.Math(input_files=[file1, file2], output_file=output_file, calc_add=True)
+
+    a.run()
+
+    data_mincmath_output = read_minc(output_file)
+
+    remove(file1)
+    remove(file2)
+    remove(output_file)
+
+    yield assert_true, np.max(np.abs((data1 + data2) - data_mincmath_output)) < 1e-07
