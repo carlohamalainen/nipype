@@ -23,10 +23,6 @@ Author: Carlo Hamalainen <carlo@carlo-hamalainen.net>
 
 # FIXME check all interface .help() outputs for out_file vs output_file.
 
-# FIXME check that the _list_outputs functions do a return at the end.
-
-# FIXME factor out common definitions, e.g. max_buffer_size_in_kb?
-
 from nipype.interfaces.base import (
     TraitedSpec,
     CommandLineInputSpec,
@@ -1475,14 +1471,6 @@ class Blur(StdOutCommandLine):
             return '%s %s' % (super(Blur, self).cmdline, self._gen_output_base())
 
 class MathInputSpec(CommandLineInputSpec):
-    """
-    FIXME Not implemented
-    -verbose:               Print out log messages (default).
-    -quiet:                 Do not print out log messages.
-    -debug:                 Print out debugging messages.
-
-    """
-
     _xor_input_files = ('input_files', 'filelist')
 
     input_files = InputMultiPath(
@@ -1540,29 +1528,6 @@ class MathInputSpec(CommandLineInputSpec):
     check_dimensions    = traits.Bool(desc='Check that dimension info matches across files (default).', argstr='-check_dimensions',     xor=_xor_check_dimensions)
     no_check_dimensions = traits.Bool(desc='Do not check dimension info.',                              argstr='-nocheck_dimensions',   xor=_xor_check_dimensions)
 
-    test_gt = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 > vol2 or vol1 > constant.',             argstr='-gt')
-    test_lt = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 < vol2 or vol1 < constant.',             argstr='-lt')
-    test_eq = traits.Either(traits.Bool(), traits.Float(), desc='Test for integer vol1 == vol2 or vol1 == constant.',   argstr='-eq')
-    test_ne = traits.Either(traits.Bool(), traits.Float(), desc='Test for integer vol1 != vol2 or vol1 != const.',      argstr='-ne')
-    test_ge = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 >= vol2 or vol1 >= const.',              argstr='-ge')
-    test_le = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 <= vol2 or vol1 <= const.',              argstr='-le')
-
-    calc_and = traits.Bool(desc='Calculate vol1 && vol2 (&& ...).', argstr='-and')
-    calc_or  = traits.Bool(desc='Calculate vol1 || vol2 (|| ...).', argstr='-or')
-    calc_not = traits.Bool(desc='Calculate !vol1.',                 argstr='-not')
-
-    calc_add = traits.Either(traits.Bool(), traits.Float(), desc='Add N volumes or volume + constant.',         argstr='-add')
-    calc_sub = traits.Either(traits.Bool(), traits.Float(), desc='Subtract 2 volumes or volume - constant.',    argstr='-sub')
-    calc_mul = traits.Either(traits.Bool(), traits.Float(), desc='Multiply N volumes or volume * constant.',    argstr='-mult')
-    calc_div = traits.Either(traits.Bool(), traits.Float(), desc='Divide 2 volumes or volume / constant.',      argstr='-div')
-
-    invert = traits.Either(traits.Bool(), traits.Float(), desc='Calculate 1/x at each voxel (use -constant for c/x).', argstr='-invert')
-
-    bool_or_const_traits = [ 'test_gt', 'test_lt', 'test_eq', 'test_ne', 'test_ge', 'test_le',
-                             'calc_add', 'calc_sub', 'calc_mul', 'calc_div',
-                             'invert',
-                           ]
-
     dimension = traits.Str(desc='Specify a dimension along which we wish to perform a calculation.', argstr='-dimension')
 
     # FIXME Is it sensible to use ignore_nan and propagate_nan at the same time? Document this.
@@ -1577,17 +1542,43 @@ class MathInputSpec(CommandLineInputSpec):
     output_illegal  = traits.Bool(desc='Value to write out when an illegal operation is done. Default value: 1.79769e+308', argstr='-illegal_value',    xor=_xor_nan_zero_illegal)
 
     # FIXME A whole bunch of the parameters will be mutually exclusive, e.g. surely can't do sqrt and abs at the same time?
+    # Or does mincmath do one and then the next?
+
+    #######################################################################################
+    # Traits that expect a bool (compare two volumes) or constant (manipulate one volume) #
+    #######################################################################################
+
+    bool_or_const_traits = [ 'test_gt', 'test_lt', 'test_eq', 'test_ne', 'test_ge', 'test_le',
+                             'calc_add', 'calc_sub', 'calc_mul', 'calc_div',
+                           ]
+
+    test_gt = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 > vol2 or vol1 > constant.',             argstr='-gt')
+    test_lt = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 < vol2 or vol1 < constant.',             argstr='-lt')
+    test_eq = traits.Either(traits.Bool(), traits.Float(), desc='Test for integer vol1 == vol2 or vol1 == constant.',   argstr='-eq')
+    test_ne = traits.Either(traits.Bool(), traits.Float(), desc='Test for integer vol1 != vol2 or vol1 != const.',      argstr='-ne')
+    test_ge = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 >= vol2 or vol1 >= const.',              argstr='-ge')
+    test_le = traits.Either(traits.Bool(), traits.Float(), desc='Test for vol1 <= vol2 or vol1 <= const.',              argstr='-le')
+
+    calc_add = traits.Either(traits.Bool(), traits.Float(), desc='Add N volumes or volume + constant.',         argstr='-add')
+    calc_sub = traits.Either(traits.Bool(), traits.Float(), desc='Subtract 2 volumes or volume - constant.',    argstr='-sub')
+    calc_mul = traits.Either(traits.Bool(), traits.Float(), desc='Multiply N volumes or volume * constant.',    argstr='-mult')
+    calc_div = traits.Either(traits.Bool(), traits.Float(), desc='Divide 2 volumes or volume / constant.',      argstr='-div')
+
+    ######################################
+    # Traits that expect a single volume #
+    ######################################
+
+    single_volume_traits = [ 'invert', 'calc_not', 'sqrt', 'square', 'abs', 'exp', 'log',
+                             'scale', 'clamp', 'segment', 'nsegment',
+                             'isnan', 'isnan' ] # FIXME enforce this in _parse_inputs and check for other members
+
+    invert = traits.Either(traits.Float(), desc='Calculate 1/c.', argstr='-invert -const %s')
+
+    calc_not = traits.Bool(desc='Calculate !vol1.', argstr='-not')
 
     sqrt   = traits.Bool(desc='Take square root of a volume.', argstr='-sqrt')
     square = traits.Bool(desc='Take square of a volume.', argstr='-square')
     abs = traits.Bool(desc='Take absolute value of a volume.', argstr='-abs')
-
-    single_volume_traits = [ 'sqrt', 'square', 'abs', 'log',
-                             'scale', 'clamp', 'segment', 'nsegment',
-                             'isnan', 'isnan' ] # FIXME enforce this in _parse_inputs and check for other members
-
-    maximum = traits.Bool(desc='Find maximum of N volumes.', argstr='-maximum')
-    minimum = traits.Bool(desc='Find minimum of N volumes.', argstr='-minimum')
 
     exp = traits.Tuple(
                 traits.Float, traits.Float, argstr='-exp -const2 %s %s',
@@ -1617,17 +1608,52 @@ class MathInputSpec(CommandLineInputSpec):
 
     nisnan = traits.Bool(desc='Negation of -isnan.', argstr='-nisnan')
 
-    two_volume_traits = ['percentdiff'] # FIXME enforce this in _parse_inputs and check for other members.
+    ############################################
+    # Traits that expect precisely two volumes #
+    ############################################
+
+    two_volume_traits = ['percentdiff']
 
     percentdiff = traits.Float(desc='Percent difference between 2 volumes, thresholded (const def=0.0).', argstr='-percentdiff')
 
+    #####################################
+    # Traits that expect N >= 1 volumes #
+    #####################################
+
+    n_volume_traits = [ 'count_valid', 'maximum', 'minimum', 'calc_add', 'calc_or' ]
+
     count_valid = traits.Bool(desc='Count the number of valid values in N volumes.', argstr='-count_valid')
 
+    maximum = traits.Bool(desc='Find maximum of N volumes.', argstr='-maximum')
+    minimum = traits.Bool(desc='Find minimum of N volumes.', argstr='-minimum')
+
+    calc_and = traits.Bool(desc='Calculate vol1 && vol2 (&& ...).', argstr='-and')
+    calc_or  = traits.Bool(desc='Calculate vol1 || vol2 (|| ...).', argstr='-or')
 
 class MathOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
 
 class Math(StdOutCommandLine):
+    """
+    Various mathematical operations supplied by mincmath.
+
+    Examples
+    --------
+
+    >>> from nipype.interfaces.minc import Math
+    >>> from nipype.testing import minc2Dfile
+
+    Scale: volume*3.0 + 2:
+
+    >>> scale = Math(input_files=[minc2Dfile], scale=(3.0, 2))
+    >>> scale.run() # doctest: +SKIP
+
+    Test if >= 1.5:
+
+    >>> gt = Math(input_files=[minc2Dfile], test_gt=1.5)
+    >>> gt.run() # doctest: +SKIP
+    """
+
     input_spec  = MathInputSpec
     output_spec = MathOutputSpec
     _cmd = 'mincmath'
@@ -1651,16 +1677,18 @@ class Math(StdOutCommandLine):
         """A number of the command line options expect precisely one or two files.
         """
 
+        nr_input_files = len(self.inputs.input_files)
+
         for n in self.input_spec.bool_or_const_traits:
             t = self.inputs.__getattribute__(n)
 
             if isdefined(t):
                 if isinstance(t, bool):
-                    if len(self.inputs.input_files) != 2:
-                        raise ValueError, 'Due to the %s option we expected 2 files but input_files is of length %d' % (n, len(self.inputs.input_files),)
+                    if nr_input_files != 2:
+                        raise ValueError, 'Due to the %s option we expected 2 files but input_files is of length %d' % (n, nr_input_files,)
                 elif isinstance(t, float):
-                    if len(self.inputs.input_files) != 1:
-                        raise ValueError, 'Due to the %s option we expected 1 file but input_files is of length %d' % (n, len(self.inputs.input_files),)
+                    if nr_input_files != 1:
+                        raise ValueError, 'Due to the %s option we expected 1 file but input_files is of length %d' % (n, nr_input_files,)
                 else:
                     raise ValueError, 'Argument should be a bool or const, but got: %s' % t
 
@@ -1668,15 +1696,22 @@ class Math(StdOutCommandLine):
             t = self.inputs.__getattribute__(n)
 
             if isdefined(t):
-                if len(self.inputs.input_files) != 1:
-                    raise ValueError, 'Due to the %s option we expected 1 file but input_files is of length %d' % (n, len(self.inputs.input_files),)
+                if nr_input_files != 1:
+                    raise ValueError, 'Due to the %s option we expected 1 file but input_files is of length %d' % (n, nr_input_files,)
 
         for n in self.input_spec.two_volume_traits:
             t = self.inputs.__getattribute__(n)
 
             if isdefined(t):
-                if len(self.inputs.input_files) != 2:
-                    raise ValueError, 'Due to the %s option we expected 2 files but input_files is of length %d' % (n, len(self.inputs.input_files),)
+                if nr_input_files != 2:
+                    raise ValueError, 'Due to the %s option we expected 2 files but input_files is of length %d' % (n, nr_input_files,)
+
+        for n in self.input_spec.n_volume_traits:
+            t = self.inputs.__getattribute__(n)
+
+            if isdefined(t):
+                if not nr_input_files >= 1:
+                    raise ValueError, 'Due to the %s option we expected at least one file but input_files is of length %d' % (n, nr_input_files,)
 
         return super(Math, self)._parse_inputs()
 
