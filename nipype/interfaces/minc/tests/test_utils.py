@@ -413,3 +413,76 @@ def test_mincmath_add():
     remove(output_file)
 
     yield assert_true, np.max(np.abs((data1 + data2) - data_mincmath_output)) < 1e-07
+
+@skipif(no_minc)
+def test_mincmath_test_gt():
+    """
+    Test mincmath's test_gt function.
+    """
+
+    np.random.seed(0) # FIXME fix the seed for tests?
+
+    file1 = create_empty_temp_file()
+    file2 = create_empty_temp_file()
+    output_file = create_empty_temp_file()
+
+    shape = (5, 5)
+
+    data1 = np.random.random(shape)
+    data2 = np.random.random(shape)
+
+    write_minc(file1, data1)
+    write_minc(file2, data2)
+
+    a = minc.Math(input_files=[file1, file2], output_file=output_file, test_gt=True)
+
+    a.run()
+
+    data_mincmath_output = read_minc(output_file)
+
+    expected_output = np.array([[0.0, 1.0, 0.0, 1.0, 1.0],
+                                [1.0, 0.0, 1.0, 1.0, 1.0],
+                                [1.0, 0.0, 0.0, 0.0, 0.0],
+                                [0.0, 0.0, 1.0, 1.0, 1.0],
+                                [1.0, 1.0, 1.0, 1.0, 0.0]])
+
+
+    remove(file1)
+    remove(file2)
+    remove(output_file)
+
+    yield assert_true, ((data_mincmath_output - expected_output) == 0).all()
+
+@skipif(no_minc)
+def test_mincmath_scale():
+    """
+    Test mincmath's scale function.
+    """
+
+    np.random.seed(0) # FIXME fix the seed for tests?
+
+    file1 = create_empty_temp_file()
+    output_file = create_empty_temp_file()
+
+    shape = (5, 5)
+
+    data1 = np.random.random(shape)
+
+    write_minc(file1, data1)
+
+    a = minc.Math(input_files=[file1], output_file=output_file, scale=(2.0, 5.0))
+
+    a.run()
+
+    data_mincmath_output = read_minc(output_file)
+
+    expected_output = np.array([[6.09762716293335, 6.4303789138793945, 6.205526828765869, 6.089766502380371, 5.847309589385986],
+                                [6.291788101196289, 5.875174522399902, 6.783545970916748, 6.92732572555542, 5.76688289642334],
+                                [6.5834503173828125, 6.0577898025512695, 6.136089324951172, 6.851193428039551, 5.1420722007751465],
+                                [5.174258708953857, 5.040436744689941, 6.6652398109436035, 6.556313514709473, 6.740024089813232],
+                                [6.9572367668151855, 6.5983171463012695, 5.922958850860596, 6.561058521270752, 5.236548900604248]])
+
+    remove(file1)
+    remove(output_file)
+
+    yield assert_true, np.max(np.abs(data_mincmath_output - expected_output)) < 1e-10
