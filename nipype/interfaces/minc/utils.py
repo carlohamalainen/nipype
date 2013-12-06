@@ -1735,8 +1735,194 @@ class Math(StdOutCommandLine):
             # the instantiation of Math?
             return '%s %s' % (super(Math, self).cmdline, self._gen_outfilename())
 
+class ResampleInputSpec(CommandLineInputSpec):
+    """
+ -standard_sampling:       Set the sampling to standard values (step, start and dircos).
+ -units:                   Specify the units of the output sampling.
+ -nelements:               Number of elements along each dimension (X, Y, Z).
+ -xnelements:              Number of elements along the X dimension
+ -ynelements:              Number of elements along the Y dimension
+ -znelements:              Number of elements along the Z dimension
+ -size:                    synonym for -nelements)
+ -xsize:                   synonym for -xnelements
+ -ysize:                   synonym for -ynelements
+ -zsize:                   synonym for -ynelements
+ -step:                    Step size along each dimension (X, Y, Z). Default value: (0, 0, 0).
+ -xstep:                   Step size along the X dimension. Default value: 0.
+ -ystep:                   Step size along the Y dimension. Default value: 0.
+ -zstep:                   Step size along the Z dimension. Default value: 0.
+ -start:                   Start point along each dimension (X, Y, Z). Default value: 1.79769e+308 1.79769e+308 1.79769e+308.
+ -xstart:                  Start point along the X dimension. Default value: 1.79769e+308.
+ -ystart:                  Start point along the Y dimension. Default value: 1.79769e+308.
+ -zstart:                  Start point along the Z dimension. Default value: 1.79769e+308.
+ -dircos:                  Direction cosines along each dimension (X, Y, Z). Default value: 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308.
+ -xdircos:                 Direction cosines along the X dimension. Default value: 1.79769e+308 1.79769e+308 1.79769e+308.
+ -ydircos:                 Direction cosines along the Y dimension. Default value: 1.79769e+308 1.79769e+308 1.79769e+308.
+ -zdircos:                 Direction cosines along the Z dimension. Default value: 1.79769e+308 1.79769e+308 1.79769e+308.
+
+
+    """
+
+    input_file = File(
+                    desc='input file for resampling',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-2,)
+
+    output_file = File(
+                    desc='output file',
+                    genfile=True,
+                    argstr='%s',
+                    position=-1,)
+
+    two = traits.Bool(desc='Create a MINC 2 output file.', argstr='-2')
+
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
+
+    _xor_interpolation = ('trilinear_interpolation', 'tricubic_interpolation',
+                          'nearest_neighbour_interpolation', 'sinc_interpolation')
+
+    trilinear_interpolation = traits.Bool(
+                                    desc='Do trilinear interpolation.',
+                                    argstr='-trilinear',
+                                    xor=_xor_interpolation)
+    tricubic_interpolation = traits.Bool(
+                                    desc='Do tricubic interpolation.',
+                                    argstr='-tricubic',
+                                    xor=_xor_interpolation)
+
+    nearest_neighbour_interpolation = traits.Bool(
+                                    desc='Do nearest neighbour interpolation.',
+                                    argstr='-nearest_neighbour',
+                                    xor=_xor_interpolation)
+
+    sinc_interpolation = traits.Bool(
+                                    desc='Do windowed sinc interpolation.',
+                                    argstr='-sinc',
+                                    xor=_xor_interpolation)
+
+    half_width_sinc_window = traits.Enum(5, 1, 2, 3, 4, 6, 7, 8, 9, 10,
+                                    desc='Set half-width of sinc window (1-10). Default value: 5.',
+                                    argstr='-width %s',
+                                    requires=['sinc_interpolation'])
+
+    _xor_sinc_window_type = ('sinc_window_hanning', 'sinc_window_hamming')
+
+    sinc_window_hanning = traits.Bool(
+                                    desc='Set sinc window type to Hanning.',
+                                    argstr='-hanning',
+                                    xor=_xor_sinc_window_type,
+                                    requires=['sinc_interpolation'])
+
+    sinc_window_hamming = traits.Bool(
+                                    desc='Set sinc window type to Hamming.',
+                                    argstr='-hamming',
+                                    xor=_xor_sinc_window_type,
+                                    requires=['sinc_interpolation'])
+
+    transformation = traits.File(
+                        desc='File giving world transformation. (Default = identity).',
+                        exists=True,
+                        argstr='-transformation %s')
+
+    invert_transformation = traits.Bool(desc='Invert the transformation before using it.', argstr='-invert_transformation')
+
+    _xor_input_sampling = ('vio_transform', 'no_input_sampling')
+
+    vio_transform = traits.Bool(
+                        desc='VIO_Transform the input sampling with the transform (default).',
+                        argstr='-tfm_input_sampling',
+                        xor=_xor_input_sampling)
+
+    no_input_sampling = traits.Bool(
+                        desc='Use the input sampling without transforming (old behaviour).',
+                        argstr='-use_input_sampling',
+                        xor=_xor_input_sampling)
+
+    like = traits.File(desc='Specifies a model file for the resampling.', argstr='-like %s', exists=True)
+
+    _xor_format = ('format_byte', 'format_short',
+                   'format_int', 'format_long', 'format_float', 'format_double',
+                   'format_signed', 'format_unsigned',)
+
+    format_byte         = traits.Bool(desc='Write out byte data.',                              argstr='-byte',     xor=_xor_format)
+    format_short        = traits.Bool(desc='Write out short integer data.',                     argstr='-short',    xor=_xor_format)
+    format_int          = traits.Bool(desc='Write out 32-bit integer data.',                    argstr='-int',      xor=_xor_format)
+    format_long         = traits.Bool(desc='Superseded by -int.',                               argstr='-long',     xor=_xor_format)
+    format_float        = traits.Bool(desc='Write out single-precision floating-point data.',   argstr='-float',    xor=_xor_format)
+    format_double       = traits.Bool(desc='Write out double-precision floating-point data.',   argstr='-double',   xor=_xor_format)
+    format_signed       = traits.Bool(desc='Write signed integer data.',                        argstr='-signed',   xor=_xor_format)
+    format_unsigned     = traits.Bool(desc='Write unsigned integer data (default).',            argstr='-unsigned', xor=_xor_format)
+
+    output_range = traits.Tuple(
+                        traits.Float, traits.Float, argstr='-range %s %s',
+                        desc='Valid range for output data. Default value: -1.79769e+308 -1.79769e+308.')
+
+    _xor_slices = ('transverse', 'sagittal', 'coronal')
+
+    transverse_slices = traits.Bool(
+                            desc='Write out transverse slices.',
+                            argstr='-transverse',
+                            xor=_xor_slices)
+
+    sagittal_slices = traits.Bool(
+                            desc='Write out sagittal slices',
+                            argstr='-sagittal',
+                            xor=_xor_slices)
+
+    coronal_slices = traits.Bool(
+                            desc='Write out coronal slices',
+                            argstr='-coronal',
+                            xor=_xor_slices)
+
+    _xor_fill = ('nofill', 'fill')
+
+    no_fill = traits.Bool(desc='Use value zero for points outside of input volume.', argstr='-nofill', xor=_xor_fill)
+    fill    = traits.Bool(desc='Use a fill value for points outside of input volume.', argstr='-fill', xor=_xor_fill)
+
+    fill_value = traits.Float(
+                    desc='Specify a fill value for points outside of input volume. Default value: 1.79769e+308.',
+                    argstr='-fillvalue %s',
+                    requires=['fill'])
+
+    _xor_scale = ('keep_real_range', 'nokeep_real_range')
+
+    keep_real_range = traits.Bool(
+                    desc='Keep the real scale of the input volume.', 
+                    argstr='-keep_real_range',
+                    xor=_xor_scale)
+
+    nokeep_real_range = traits.Bool(
+                    desc='Do not keep the real scale of the data (default).',
+                    argstr='-nokeep_real_range',
+                    xor=_xor_scale)
+
+    _xor_spacetype = ('spacetype', 'talairach')
+
+    spacetype = traits.Str(desc='Set the spacetype attribute to a specified string.', argstr='-spacetype %s')
+    talairach = traits.Bool(desc='Output is in Talairach space.', argstr='-talairach')
+
+    origin = traits.Tuple(
+                    traits.Float, traits.Float, traits.Float,
+                    desc='Origin of first pixel in 3D space. Default value: 1.79769e+308 1.79769e+308 1.79769e+308.',
+                    argstr='-origin %s %s %s')
+
+class ResampleOutputSpec(TraitedSpec):
+    output_file = File(desc='output file', exists=True)
+
+class Resample(StdOutCommandLine):
+    input_spec  = ResampleInputSpec
+    output_spec = ResampleOutputSpec
+    _cmd = 'mincresample'
+
+
+    # FIXME _gen_outfilename for output_filename
+
 # TODO from volgenmodel:
 # mincnorm  ??? Not in my installation of MINC.
-# mincpik
-# mincmath
 # mincresample
+
+
+
+
