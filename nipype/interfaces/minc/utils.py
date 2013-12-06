@@ -400,7 +400,7 @@ class Convert(CommandLine):
     Examples
     --------
 
-    >>> from nipype.interfaces.minc import ToRaw
+    >>> from nipype.interfaces.minc import Convert
     >>> from nipype.testing import minc2Dfile
     >>> c = Convert(input_file=minc2Dfile, output_file='/tmp/out.mnc', two=True) # Convert to MINC2 format.
     >>> c.run() # doctest: +SKIP
@@ -798,12 +798,12 @@ class Average(CommandLine):
     Examples
     --------
 
-    >>> from nipype.interfaces.minc import Dump
-    >>> from nipype.testing import minc2Dfile, nonempty_minc_data
+    >>> from nipype.interfaces.minc import Average
+    >>> from nipype.testing import nonempty_minc_data
 
     >>> files = [nonempty_minc_data(i) for i in range(3)]
     >>> average = Average(input_files=files, output_file='/tmp/tmp.mnc')
-    >>> dump.run() # doctest: +SKIP
+    >>> average.run() # doctest: +SKIP
 
     """
 
@@ -987,7 +987,7 @@ class Calc(CommandLine):
     --------
 
     >>> from nipype.interfaces.minc import Calc
-    >>> from nipype.testing import minc2Dfile, nonempty_minc_data
+    >>> from nipype.testing import nonempty_minc_data
 
     >>> file0 = nonempty_minc_data(0)
     >>> file1 = nonempty_minc_data(1)
@@ -1407,14 +1407,14 @@ class Blur(StdOutCommandLine):
     blurring kernel:
 
     >>> blur = Blur(input_file=minc3Dfile, fwhm=6, output_file_base='/tmp/out_6')
-    >>> extract.run() # doctest: +SKIP
+    >>> blur.run() # doctest: +SKIP
 
     mincblur will create /tmp/out_6_blur.mnc.
 
     (2) Calculate the blurred and gradient magnitude data:
 
     >>> blur = Blur(input_file=minc3Dfile, fwhm=6, gradient=True, output_file_base='/tmp/out_6')
-    >>> extract.run() # doctest: +SKIP
+    >>> blur.run() # doctest: +SKIP
 
     will create /tmp/out_6_blur.mnc and /tmp/out_6_dxyz.mnc.
 
@@ -1422,7 +1422,7 @@ class Blur(StdOutCommandLine):
     and  the gradient magnitude for the same data:
 
     >>> blur = Blur(input_file=minc3Dfile, fwhm=6, partial=True, output_file_base='/tmp/out_6')
-    >>> extract.run() # doctest: +SKIP
+    >>> blur.run() # doctest: +SKIP
 
     will create /tmp/out_6_blur.mnc, /tmp/out_6_dx.mnc,
     /tmp/out_6_dy.mnc, /tmp/out_6_dz.mnc and /tmp/out_6_dxyz.mnc.
@@ -1660,7 +1660,8 @@ class Math(StdOutCommandLine):
 
     def _format_arg(self, name, spec, value):
         if name in self.input_spec.bool_or_const_traits:
-            t = self.inputs.__getattribute__(name)
+            # t is unused, what was I trying to do with it?
+            # t = self.inputs.__getattribute__(name)
 
             if isinstance(value, bool) and value:
                 return spec.argstr
