@@ -2003,9 +2003,23 @@ class ResampleOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
 
 class Resample(StdOutCommandLine):
+    """
+    Resample a minc file.'
+
+    Examples
+    --------
+
+    >>> from nipype.interfaces.minc import Resample
+    >>> from nipype.testing import minc2Dfile
+    >>> r = Resample(input_file=minc2Dfile, output_file='/tmp/out.mnc') # Resample the file.
+    >>> r.run() # doctest: +SKIP
+
+    """
+
     input_spec  = ResampleInputSpec
     output_spec = ResampleOutputSpec
     _cmd = 'mincresample'
+
 
     def _gen_filename(self, name):
         if name == 'output_file':
