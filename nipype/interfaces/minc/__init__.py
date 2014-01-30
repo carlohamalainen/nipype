@@ -10,4 +10,4 @@ from .base import (Info, check_minc, no_minc)
 from .utils import (ToRaw, Convert, Copy,
                     ToEcat, Dump, Average,
                     Calc, Extract, Blob,
-                    Blur, Math)
+                    Blur, Math, Norm)

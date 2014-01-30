@@ -1917,13 +1917,104 @@ class Resample(StdOutCommandLine):
     output_spec = ResampleOutputSpec
     _cmd = 'mincresample'
 
-
     # FIXME _gen_outfilename for output_filename
 
 # TODO from volgenmodel:
-# mincnorm  ??? Not in my installation of MINC.
 # mincresample
 
 
+class NormInputSpec(CommandLineInputSpec):
+    """
 
+    Not implemented:
+
+       -version         print version and exit
+       -verbose         be verbose
+       -noverbose       opposite of -verbose [default]
+       -quiet           be quiet
+       -noquiet         opposite of -quiet [default]
+       -fake            do a dry run, (echo cmds only)
+       -nofake          opposite of -fake [default]
+    """
+
+    input_file = File(
+                    desc='input file to normalise',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-2,)
+
+    output_file = File(
+                    desc='output file',
+                    genfile=True,
+                    argstr='%s',
+                    position=-1,)
+
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
+
+    # Normalisation Options
+    mask    = traits.File(desc='Calculate the image normalisation within a mask.', argstr='-mask %s', exists=True)
+    clamp   = traits.Bool(desc='Force the ouput range between limits [default].',  argstr='-clamp', usedefault=True, default_value=True)
+
+    cutoff  = traits.Range(low=0, high=100,
+                        desc='Cutoff value to use to calculate thresholds by a histogram PcT in %. [default: 0.01]',
+                        argstr='-cutoff %s',)
+
+    lower   = traits.Float(desc='Lower real value to use.', argstr='-lower %s')
+    upper   = traits.Float(desc='Upper real value to use.', argstr='-upper %s')
+
+    out_floor   = traits.Float(desc='Output files maximum [default: 0]', argstr='-out_floor %s') # FIXME is this a float?
+    out_ceil    = traits.Float(desc='Output files minimum [default: 100]', argstr='-out_ceil %s') # FIXME is this a float?
+
+    # Threshold Options
+    threhold = traits.Bool(desc='Threshold the image (set values below threshold_perc to -out_floor).', argstr='-threshold')
+
+    threshold_perc = traits.Range(low=0, high=100,
+                            desc='Threshold percentage (0.1 == lower 10% of intensity range) [default: 0.1].',
+                            argstr='-threshold_perc') # FIXME Range? Float?
+
+    threshold_bmt = traits.Bool(desc='Use the resulting image BiModalT as the threshold.', argstr='-threshold_bmt')
+
+    threshold_blur = traits.Int(desc='Blur FWHM for intensity edges then thresholding [default: 2].', argstr='-threshold_blur') # FIXME Int?
+
+    threshold_mask = traits.File(desc='File in which to store the threshold mask.', argstr='-threshold_mask %s', exists=True)
+
+class NormOutputSpec(TraitedSpec):
+    output_file = File(desc='output file', exists=True)
+
+class Norm(CommandLine):
+    """Normalise a file between a max and minimum (possibly)
+       using two histogram pct's.
+
+    Examples
+    --------
+
+    >>> from nipype.interfaces.minc import Norm
+    >>> from nipype.testing import minc2Dfile
+    >>> n = Norm(input_file=minc2Dfile, output_file='/tmp/out.mnc') # Normalise the file.
+    >>> n.run() # doctest: +SKIP
+    """
+
+    input_spec  = NormInputSpec
+    output_spec = NormOutputSpec
+    _cmd = 'mincnorm'
+
+    def _gen_filename(self, name):
+        if name == 'output_file':
+            output_file = self.inputs.output_file
+
+            if isdefined(output_file):
+                return os.path.abspath(output_file)
+            else:
+                return aggregate_filename([self.inputs.input_file], 'norm_output')
+        else:
+            raise NotImplemented
+
+    def _gen_outfilename(self):
+        return self._gen_filename('output_file')
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
 
