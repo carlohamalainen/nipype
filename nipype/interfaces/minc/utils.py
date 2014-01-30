@@ -780,7 +780,7 @@ class AverageInputSpec(CommandLineInputSpec):
                 desc='Specify a range for binarization. Default value: 1.79769e+308 -1.79769e+308.')
 
     binvalue = traits.Float(desc='Specify a target value (+/- 0.5) for binarization. Default value: -1.79769e+308', argstr='-binvalue %s')
-		
+
     weights = InputMultiPath(
                             traits.Str,
                             desc='Specify weights for averaging ("<w1>,<w2>,...").',
@@ -1738,29 +1738,11 @@ class Math(StdOutCommandLine):
 
 class ResampleInputSpec(CommandLineInputSpec):
     """
- -standard_sampling:       Set the sampling to standard values (step, start and dircos).
- -units:                   Specify the units of the output sampling.
- -nelements:               Number of elements along each dimension (X, Y, Z).
- -xnelements:              Number of elements along the X dimension
- -ynelements:              Number of elements along the Y dimension
- -znelements:              Number of elements along the Z dimension
- -size:                    synonym for -nelements)
- -xsize:                   synonym for -xnelements
- -ysize:                   synonym for -ynelements
- -zsize:                   synonym for -ynelements
- -step:                    Step size along each dimension (X, Y, Z). Default value: (0, 0, 0).
- -xstep:                   Step size along the X dimension. Default value: 0.
- -ystep:                   Step size along the Y dimension. Default value: 0.
- -zstep:                   Step size along the Z dimension. Default value: 0.
- -start:                   Start point along each dimension (X, Y, Z). Default value: 1.79769e+308 1.79769e+308 1.79769e+308.
- -xstart:                  Start point along the X dimension. Default value: 1.79769e+308.
- -ystart:                  Start point along the Y dimension. Default value: 1.79769e+308.
- -zstart:                  Start point along the Z dimension. Default value: 1.79769e+308.
- -dircos:                  Direction cosines along each dimension (X, Y, Z). Default value: 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308.
- -xdircos:                 Direction cosines along the X dimension. Default value: 1.79769e+308 1.79769e+308 1.79769e+308.
- -ydircos:                 Direction cosines along the Y dimension. Default value: 1.79769e+308 1.79769e+308 1.79769e+308.
- -zdircos:                 Direction cosines along the Z dimension. Default value: 1.79769e+308 1.79769e+308 1.79769e+308.
-
+    not implemented:
+     -size:                    synonym for -nelements)
+     -xsize:                   synonym for -xnelements
+     -ysize:                   synonym for -ynelements
+     -zsize:                   synonym for -ynelements
 
     """
 
@@ -1890,7 +1872,7 @@ class ResampleInputSpec(CommandLineInputSpec):
     _xor_scale = ('keep_real_range', 'nokeep_real_range')
 
     keep_real_range = traits.Bool(
-                    desc='Keep the real scale of the input volume.', 
+                    desc='Keep the real scale of the input volume.',
                     argstr='-keep_real_range',
                     xor=_xor_scale)
 
@@ -1909,6 +1891,114 @@ class ResampleInputSpec(CommandLineInputSpec):
                     desc='Origin of first pixel in 3D space. Default value: 1.79769e+308 1.79769e+308 1.79769e+308.',
                     argstr='-origin %s %s %s')
 
+
+    standard_sampling = traits.Bool(desc='Set the sampling to standard values (step, start and dircos).', argstr='-standard_sampling') # FIXME Bool?
+    units = traits.Str(desc='Specify the units of the output sampling.', argstr='-units %s') # FIXME String?
+
+    # Elements along each dimension.
+    # FIXME Ints? Ranges?
+    # FIXME Check that this xor behaves correctly.
+    _xor_nelements = ('nelements', 'nelements_x_y_or_z')
+
+    ####### nr elements along each dimension #########
+    nelements = traits.Tuple(traits.Int, traits.Int, traits.Int,
+                             desc='Number of elements along each dimension (X, Y, Z).',
+                             argstr='-nelements %s %s %s',
+                             xor=_xor_nelements)
+
+    # FIXME Is mincresample happy if we only specify one of these, or do we need the requires=...?
+    xnelements = traits.Int(
+                    desc='Number of elements along the X dimension.',
+                    argstr='-xnelements %s',
+                    requires=('ynelements', 'znelements'),
+                    xor=_xor_nelements)
+
+    ynelements = traits.Int(desc='Number of elements along the Y dimension.',
+                    argstr='-ynelements %s',
+                    requires=('xnelements', 'znelements'),
+                    xor=_xor_nelements)
+
+    znelements = traits.Int(desc='Number of elements along the Z dimension.',
+                    argstr='-znelements %s',
+                    requires=('xnelements', 'ynelements'),
+                    xor=_xor_nelements)
+
+
+    ####### step size along each dimension #########
+    _xor_step = ('step', 'step_x_y_or_z')
+
+    step = traits.Tuple(traits.Int, traits.Int, traits.Int,
+                             desc='Step size along each dimension (X, Y, Z). Default value: (0, 0, 0).',
+                             argstr='-step %s %s %s',
+                             xor=_xor_nelements)
+
+    # FIXME Use the requires=...?
+    xstep = traits.Int(
+                    desc='Step size along the X dimension. Default value: 0.',
+                    argstr='-xstep %s',
+                    requires=('ystep', 'zstep'),
+                    xor=_xor_step)
+
+    ystep = traits.Int(desc='Step size along the Y dimension. Default value: 0.',
+                    argstr='-ystep %s',
+                    requires=('xstep', 'zstep'),
+                    xor=_xor_step)
+
+    zstep = traits.Int(desc='Step size along the Z dimension. Default value: 0.',
+                    argstr='-zstep %s',
+                    requires=('xstep', 'ystep'),
+                    xor=_xor_step)
+
+    ####### start point along each dimension #########
+    _xor_start = ('start', 'start_x_y_or_z')
+
+    start = traits.Tuple(traits.Float, traits.Float, traits.Float,
+                             desc='Start point along each dimension (X, Y, Z). Default value: 1.79769e+308 1.79769e+308 1.79769e+308.',
+                             argstr='-start %s %s %s',
+                             xor=_xor_nelements)
+
+    # FIXME Use the requires=...?
+    xstart = traits.Float(
+                    desc='Start point along the X dimension. Default value: 1.79769e+308.',
+                    argstr='-xstart %s',
+                    requires=('ystart', 'zstart'),
+                    xor=_xor_start)
+
+    ystart = traits.Float(desc='Start point along the Y dimension. Default value: 1.79769e+308.',
+                    argstr='-ystart %s',
+                    requires=('xstart', 'zstart'),
+                    xor=_xor_start)
+
+    zstart = traits.Float(desc='Start point along the Z dimension. Default value: 1.79769e+308.',
+                    argstr='-zstart %s',
+                    requires=('xstart', 'ystart'),
+                    xor=_xor_start)
+
+    ####### dircos along each dimension #########
+    _xor_dircos = ('dircos', 'dircos_x_y_or_z')
+
+    dircos = traits.Tuple(traits.Float, traits.Float, traits.Float,
+                             desc='Direction cosines along each dimension (X, Y, Z). Default value: 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308 1.79769e+308.',
+                             argstr='-dircos %s %s %s',
+                             xor=_xor_nelements)
+
+    # FIXME Use the requires=...?
+    xdircos = traits.Float(
+                    desc='Direction cosines along the X dimension. Default value: 1.79769e+308 1.79769e+308 1.79769e+308.',
+                    argstr='-xdircos %s',
+                    requires=('ydircos', 'zdircos'),
+                    xor=_xor_dircos)
+
+    ydircos = traits.Float(desc='Direction cosines along the Y dimension. Default value: 1.79769e+308 1.79769e+308 1.79769e+308.',
+                    argstr='-ydircos %s',
+                    requires=('xdircos', 'zdircos'),
+                    xor=_xor_dircos)
+
+    zdircos = traits.Float(desc='Direction cosines along the Z dimension. Default value: 1.79769e+308 1.79769e+308 1.79769e+308.',
+                    argstr='-zdircos %s',
+                    requires=('xdircos', 'ydircos'),
+                    xor=_xor_dircos)
+
 class ResampleOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
 
@@ -1917,11 +2007,24 @@ class Resample(StdOutCommandLine):
     output_spec = ResampleOutputSpec
     _cmd = 'mincresample'
 
-    # FIXME _gen_outfilename for output_filename
+    def _gen_filename(self, name):
+        if name == 'output_file':
+            output_file = self.inputs.output_file
 
-# TODO from volgenmodel:
-# mincresample
+            if isdefined(output_file):
+                return os.path.abspath(output_file)
+            else:
+                return aggregate_filename([self.inputs.input_file], 'mincresample_output')
+        else:
+            raise NotImplemented
 
+    def _gen_outfilename(self):
+        return self._gen_filename('output_file')
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
 
 class NormInputSpec(CommandLineInputSpec):
     """
