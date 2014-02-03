@@ -23,6 +23,8 @@ Author: Carlo Hamalainen <carlo@carlo-hamalainen.net>
 
 # FIXME check all interface .help() outputs for out_file vs output_file.
 
+# FIXME Range() produces an Int, not suitable for percentage ranges. Check all of these.
+
 from nipype.interfaces.base import (
     TraitedSpec,
     CommandLineInputSpec,
@@ -63,6 +65,9 @@ def aggregate_filename(files, new_suffix):
     path            = os.path.split(files[0])[0]
     names           = [os.path.splitext(os.path.split(x)[1])[0] for x in files]
     common_prefix   = os.path.commonprefix(names)
+
+    # FIXME use cwd instead, also allow passing this in?
+    path = os.getcwd()
 
     if common_prefix == '':
         return os.path.abspath(os.path.join(path, os.path.splitext(files[0])[0] + '_' + new_suffix + '.mnc'))
@@ -2073,7 +2078,7 @@ class NormInputSpec(CommandLineInputSpec):
     mask    = traits.File(desc='Calculate the image normalisation within a mask.', argstr='-mask %s', exists=True)
     clamp   = traits.Bool(desc='Force the ouput range between limits [default].',  argstr='-clamp', usedefault=True, default_value=True)
 
-    cutoff  = traits.Range(low=0, high=100,
+    cutoff  = traits.Float(min=0, max=100,
                         desc='Cutoff value to use to calculate thresholds by a histogram PcT in %. [default: 0.01]',
                         argstr='-cutoff %s',)
 
@@ -2086,13 +2091,13 @@ class NormInputSpec(CommandLineInputSpec):
     # Threshold Options
     threhold = traits.Bool(desc='Threshold the image (set values below threshold_perc to -out_floor).', argstr='-threshold')
 
-    threshold_perc = traits.Range(low=0, high=100,
+    threshold_perc = traits.Float(min=0, max=100,
                             desc='Threshold percentage (0.1 == lower 10% of intensity range) [default: 0.1].',
-                            argstr='-threshold_perc') # FIXME Range? Float?
+                            argstr='-threshold_perc %s')
 
     threshold_bmt = traits.Bool(desc='Use the resulting image BiModalT as the threshold.', argstr='-threshold_bmt')
 
-    threshold_blur = traits.Int(desc='Blur FWHM for intensity edges then thresholding [default: 2].', argstr='-threshold_blur') # FIXME Int?
+    threshold_blur = traits.Float(desc='Blur FWHM for intensity edges then thresholding [default: 2].', argstr='-threshold_blur %s')
 
     threshold_mask = traits.File(desc='File in which to store the threshold mask.', argstr='-threshold_mask %s', exists=True)
 
@@ -2124,6 +2129,188 @@ class Norm(CommandLine):
                 return os.path.abspath(output_file)
             else:
                 return aggregate_filename([self.inputs.input_file], 'norm_output')
+        else:
+            raise NotImplemented
+
+    def _gen_outfilename(self):
+        return self._gen_filename('output_file')
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
+
+
+"""
+| volcentre will centre a MINC image's sampling about a point (0,0,0 typically)
+|
+| NB: It will modify the file in-place unless an outfile is given
+|
+| Problems or comments should be sent to: a.janke@gmail.com
+
+Summary of options:
+   -version      print version and exit
+   -verbose      be verbose
+   -noverbose    opposite of -verbose [default]
+   -clobber      clobber existing check files
+   -noclobber    opposite of -clobber [default]
+   -fake         do a dry run, (echo cmds only)
+   -nofake       opposite of -fake [default]
+   -com          Use the CoM of the volume for the new centre (via mincstats)
+   -nocom        opposite of -com [default]
+   -centre <float> <float> <float>
+                 Centre to use (x,y,z) [default: 0 0 0]
+   -zero_dircos  Set the direction cosines to identity [default]
+   -nozero_dirco opposite of -zero_dircos
+
+Usage: volcentre [options] <infile.mnc> [<outfile.mnc>]
+       volcentre -help to list options
+
+"""
+
+class VolcentreInputSpec(CommandLineInputSpec):
+    """
+    Not implemented:
+
+    -fake         do a dry run, (echo cmds only)
+    -nofake       opposite of -fake [default]
+
+    """
+
+    input_file = File(
+                    desc='input file to centre',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-2,)
+
+    output_file = File(
+                    desc='output file',
+                    genfile=True,
+                    argstr='%s',
+                    position=-1,)
+
+    verbose = traits.Bool(desc='Print out log messages. Default: False.', argstr='-verbose')
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
+
+    com = traits.Bool(desc='Use the CoM of the volume for the new centre (via mincstats). Default: False', argstr='-com')
+
+    centre = traits.Tuple(
+                traits.Float, traits.Float, traits.Float,
+                argstr='-centre %s %s %s',
+                desc='Centre to use (x,y,z) [default: 0 0 0].',)
+
+    zero_dircos = traits.Bool(desc='Set the direction cosines to identity [default].', argstr='-zero_dircos')
+
+class VolcentreOutputSpec(TraitedSpec):
+    output_file = File(desc='output file', exists=True)
+
+class Volcentre(CommandLine):
+    """Centre a MINC image's sampling about a point, typically (0,0,0).
+
+    Examples
+    --------
+
+    FIXME
+    """
+
+    input_spec  = VolcentreInputSpec
+    output_spec = VolcentreOutputSpec
+    _cmd = 'volcentre'
+
+    def _gen_filename(self, name):
+        if name == 'output_file':
+            output_file = self.inputs.output_file
+
+            if isdefined(output_file):
+                return os.path.abspath(output_file)
+            else:
+                return aggregate_filename([self.inputs.input_file], 'volcentre_output')
+        else:
+            raise NotImplemented
+
+    def _gen_outfilename(self):
+        return self._gen_filename('output_file')
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
+
+class VolpadInputSpec(CommandLineInputSpec):
+    """
+    Not implemented:
+
+    -fake         do a dry run, (echo cmds only)
+    -nofake       opposite of -fake [default]
+
+     | volpad pads a MINC volume
+     |
+     | Problems or comments should be sent to: a.janke@gmail.com
+
+    Summary of options:
+
+    -- General Options -------------------------------------------------------------
+       -verbose          be verbose
+       -noverbose        opposite of -verbose [default]
+       -clobber          clobber existing files
+       -noclobber        opposite of -clobber [default]
+       -fake             do a dry run, (echo cmds only)
+       -nofake           opposite of -fake [default]
+
+
+    """
+
+    input_file = File(
+                    desc='input file to centre',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-2,)
+
+    output_file = File(
+                    desc='output file',
+                    genfile=True,
+                    argstr='%s',
+                    position=-1,)
+
+    verbose = traits.Bool(desc='Print out log messages. Default: False.', argstr='-verbose')
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
+
+    auto = traits.Bool(desc='Automatically determine padding distances (uses -distance as max). Default: False.', argstr='-auto')
+
+    auto_freq = traits.Float(desc='Frequency of voxels over bimodalt threshold to stop at [default: 500].', argstr='-auto_freq %s')
+
+    distance = traits.Int(desc='Padding distance (in voxels) [default: 4].', argstr='-distance %s')
+
+    smooth = traits.Bool(desc='Smooth (blur) edges before padding. Default: False.', argstr='-smooth')
+
+    smooth_distance = traits.Int(desc='Smoothing distance (in voxels) [default: 4].', argstr='-smooth_distance %s')
+
+class VolpadOutputSpec(TraitedSpec):
+    output_file = File(desc='output file', exists=True)
+
+class Volpad(CommandLine):
+    """Centre a MINC image's sampling about a point, typically (0,0,0).
+
+    Examples
+    --------
+
+    FIXME
+    """
+
+    input_spec  = VolpadInputSpec
+    output_spec = VolpadOutputSpec
+    _cmd = 'volpad'
+
+    def _gen_filename(self, name):
+        if name == 'output_file':
+            output_file = self.inputs.output_file
+
+            if isdefined(output_file):
+                return os.path.abspath(output_file)
+            else:
+                return aggregate_filename([self.inputs.input_file], 'volpad_output')
         else:
             raise NotImplemented
 
