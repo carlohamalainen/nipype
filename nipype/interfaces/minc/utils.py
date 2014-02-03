@@ -2322,3 +2322,63 @@ class Volpad(CommandLine):
         outputs['output_file'] = os.path.abspath(self._gen_outfilename())
         return outputs
 
+class VolisoInputSpec(CommandLineInputSpec):
+
+    input_file = File(
+                    desc='input file to convert to isotropic sampling',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-2,)
+
+    output_file = File(
+                    desc='output file',
+                    genfile=True,
+                    argstr='%s',
+                    position=-1,)
+
+    verbose = traits.Bool(desc='Print out log messages. Default: False.', argstr='--verbose')
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='--clobber', usedefault=True, default_value=True)
+
+    maxstep = traits.Float(desc='The target maximum step desired in the output volume.', argstr='--maxstep %s')
+
+    minstep = traits.Float(desc='The target minimum step desired in the output volume.', argstr='--minstep %s')
+
+    avgstep = traits.Bool(desc='Calculate the maximum step from the average steps of the input volume.', argstr='--avgstep')
+
+class VolisoOutputSpec(TraitedSpec):
+    output_file = File(desc='output file', exists=True)
+
+class Voliso(CommandLine):
+    """Changes the steps and starts in order that the output volume
+    has isotropic sampling.
+
+    Examples
+    --------
+
+    FIXME
+    """
+
+    input_spec  = VolisoInputSpec
+    output_spec = VolisoOutputSpec
+    _cmd = 'voliso'
+
+    def _gen_filename(self, name):
+        if name == 'output_file':
+            output_file = self.inputs.output_file
+
+            if isdefined(output_file):
+                return os.path.abspath(output_file)
+            else:
+                return aggregate_filename([self.inputs.input_file], 'voliso_output')
+        else:
+            raise NotImplemented
+
+    def _gen_outfilename(self):
+        return self._gen_filename('output_file')
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
+
