@@ -1262,7 +1262,7 @@ class PikInputSpec(CommandLineInputSpec):
 
     _xor_sagittal_offset = ('sagittal_offset', 'sagittal_offset_perc')
 
-    sagittal_offset = traits.Int(desc='Offset the sagittal slice from the centre.', argstr='--sagittal_offset')
+    sagittal_offset = traits.Int(desc='Offset the sagittal slice from the centre.', argstr='--sagittal_offset %s')
     sagittal_offset_perc = traits.Range(low=0, high=100,
                         desc='Offset the sagittal slice by a percentage from the centre.',
                         argstr='--sagittal_offset_perc %d',)
@@ -1283,28 +1283,29 @@ class Pik(CommandLine):
     output_spec = PikOutputSpec
     _cmd = 'mincpik'
 
-    # FIXME Does this play nicely with a workflow?
-    def _gen_outfilename(self):
-        output_file = self.inputs.output_file
+    def _gen_outfilename(self, name):
+        if name == 'output_file':
+            output_file = self.inputs.output_file
 
-        if isdefined(output_file):
-            assert not isdefined(self.inputs.png) # FIXME make a warning instead?
-            assert not isdefined(self.inputs.jpg) # FIXME make a warning instead?
-            return output_file
-        else:
-            b = os.path.splitext(self.inputs.input_file)[0]
-
-            if isdefined(self.inputs.png) and self.inputs.png:
-                return b + '.png'
-            elif isdefined(self.inputs.jpg) and self.inputs.jpg:
-                return b + '.jpg'
+            if isdefined(output_file):
+                assert not isdefined(self.inputs.png) # FIXME make a warning instead?
+                assert not isdefined(self.inputs.jpg) # FIXME make a warning instead?
+                return os.path.abspath(output_file)
             else:
-                # By default we'll write a png file.
-                return b + '.png'
+                b = aggregate_filename([self.inputs.input_file], 'pik_output')
+                if isdefined(self.inputs.png) and self.inputs.png:
+                    return b + '.png'
+                elif isdefined(self.inputs.jpg) and self.inputs.jpg:
+                    return b + '.jpg'
+                else:
+                    # By default we'll write a png file.
+                    return b + '.png'
+        else:
+            raise NotImplemented
 
     def _list_outputs(self):
         outputs = self.output_spec().get()
-        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename('output_file'))
         return outputs
 
     def _format_arg(self, name, spec, value):
@@ -1317,7 +1318,6 @@ class Pik(CommandLine):
                 raise ValueError, 'Unknown value for "title" argument: ' + str(value)
         return super(Pik, self)._format_arg(name, spec, value)
 
-
     @property
     def cmdline(self):
         output_file = self.inputs.output_file
@@ -1328,7 +1328,7 @@ class Pik(CommandLine):
             # FIXME this seems like a bit of a hack. Can we force output_file
             # to show up in cmdline by default, even if it isn't specified in
             # the instantiation of Pik?
-            return '%s %s' % (super(Pik, self).cmdline, self._gen_outfilename())
+            return '%s %s' % (super(Pik, self).cmdline, self._gen_outfilename('output_file'))
 
 class BlurInputSpec(CommandLineInputSpec):
     """ FIXME not implemented
