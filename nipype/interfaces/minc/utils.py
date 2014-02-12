@@ -2089,7 +2089,7 @@ class NormInputSpec(CommandLineInputSpec):
     out_ceil    = traits.Float(desc='Output files minimum [default: 100]', argstr='-out_ceil %s') # FIXME is this a float?
 
     # Threshold Options
-    threhold = traits.Bool(desc='Threshold the image (set values below threshold_perc to -out_floor).', argstr='-threshold')
+    threshold = traits.Bool(desc='Threshold the image (set values below threshold_perc to -out_floor).', argstr='-threshold')
 
     threshold_perc = traits.Float(min=0, max=100,
                             desc='Threshold percentage (0.1 == lower 10% of intensity range) [default: 0.1].',
@@ -2099,10 +2099,15 @@ class NormInputSpec(CommandLineInputSpec):
 
     threshold_blur = traits.Float(desc='Blur FWHM for intensity edges then thresholding [default: 2].', argstr='-threshold_blur %s')
 
-    threshold_mask = traits.File(desc='File in which to store the threshold mask.', argstr='-threshold_mask %s', exists=True)
+    threshold_mask = traits.File(
+                        desc='File in which to store the threshold mask.',
+                        argstr='-threshold_mask %s',
+                        exists=True,
+                        genfile=True)
 
 class NormOutputSpec(TraitedSpec):
     output_file = File(desc='output file', exists=True)
+    threshold_mask = File(desc='threshold mask file')
 
 class Norm(CommandLine):
     """Normalise a file between a max and minimum (possibly)
@@ -2129,6 +2134,13 @@ class Norm(CommandLine):
                 return os.path.abspath(output_file)
             else:
                 return aggregate_filename([self.inputs.input_file], 'norm_output')
+        elif name == 'threshold_mask':
+            threshold_mask = self.inputs.threshold_mask
+
+            if isdefined(threshold_mask):
+                return os.path.abspath(threshold_mask)
+            else:
+                return aggregate_filename([self.inputs.input_file], 'norm_output_threshold_mask')
         else:
             raise NotImplemented
 
@@ -2382,3 +2394,52 @@ class Voliso(CommandLine):
         outputs['output_file'] = os.path.abspath(self._gen_outfilename())
         return outputs
 
+class GennlxfmInputSpec(CommandLineInputSpec):
+    output_file = File(
+                    desc='output file',
+                    genfile=True,
+                    argstr='%s',
+                    position=-1,)
+
+    verbose = traits.Bool(desc='Print out log messages. Default: False.', argstr='-verbose')
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
+
+    ident = traits.Bool(desc='Generate an identity xfm. Default: False.', argstr='-ident')
+    step  = traits.Int(desc='Output ident xfm step [default: 1].', argstr='-step %s')
+
+    like = File(desc='Generate a nlxfm like this file.',
+                exists=True,
+                argstr='-like %s',)
+
+class GennlxfmOutputSpec(TraitedSpec):
+    output_file = File(desc='output file', exists=True)
+
+class Gennlxfm(CommandLine):
+    """
+    FIXME
+    """
+
+    input_spec  = GennlxfmInputSpec
+    output_spec = GennlxfmOutputSpec
+    _cmd = 'gennlxfm'
+
+    def _gen_filename(self, name):
+        if name == 'output_file':
+            output_file = self.inputs.output_file
+
+            if isdefined(output_file):
+                return os.path.abspath(output_file)
+            elif isdefined(self.inputs.like):
+                return aggregate_filename([self.inputs.like], 'gennlxfm_output') + '.xfm'
+            else:
+                assert False, 'Cannot determine output file as neither "output_file" nor "like" were specified.'
+        else:
+            raise NotImplemented
+
+    def _gen_outfilename(self):
+        return self._gen_filename('output_file')
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs

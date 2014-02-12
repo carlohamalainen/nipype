@@ -11,4 +11,4 @@ from .utils import (ToRaw, Convert, Copy,
                     ToEcat, Dump, Average,
                     Calc, Extract, Blob,
                     Blur, Math, Resample, Norm,
-                    Volcentre, Volpad, Voliso)
+                    Volcentre, Volpad, Voliso, Gennlxfm)
