@@ -2452,8 +2452,7 @@ class XfmConcatInputSpec(CommandLineInputSpec):
                         mandatory=True,
                         sep=' ',
                         argstr='%s',
-                        position=-2,
-                        xor=_xor_input_files)
+                        position=-2)
 
     output_file = File(
                     desc='output file',
