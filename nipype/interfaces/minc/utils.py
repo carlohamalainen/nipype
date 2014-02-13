@@ -1258,7 +1258,7 @@ class PikInputSpec(CommandLineInputSpec):
     slice_x = traits.Bool(desc='Get a sagittal (x) slice.',             argstr='-x', xor=_xor_slice) # FIXME typo in man page? sagital?
 
     triplanar = traits.Bool(desc='Create a triplanar view of the input file.', argstr='--triplanar')
-    tile_size = traits.Int(desc='Pixel size for each image in a triplanar.', argstr='--tilesize')
+    tile_size = traits.Int(desc='Pixel size for each image in a triplanar.', argstr='--tilesize %s')
 
     _xor_sagittal_offset = ('sagittal_offset', 'sagittal_offset_perc')
 
@@ -2443,3 +2443,55 @@ class Gennlxfm(CommandLine):
         outputs = self.output_spec().get()
         outputs['output_file'] = os.path.abspath(self._gen_outfilename())
         return outputs
+
+class XfmConcatInputSpec(CommandLineInputSpec):
+    input_files = InputMultiPath(
+                        traits.File,
+                        desc='input file(s)',
+                        exists=True,
+                        mandatory=True,
+                        sep=' ',
+                        argstr='%s',
+                        position=-2,
+                        xor=_xor_input_files)
+
+    output_file = File(
+                    desc='output file',
+                    genfile=True,
+                    argstr='%s',
+                    position=-1,)
+
+    verbose = traits.Bool(desc='Print out log messages. Default: False.', argstr='-verbose')
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
+
+class XfmConcatOutputSpec(TraitedSpec):
+    output_file = File(desc='output file', exists=True)
+
+class XfmConcat(CommandLine):
+    """
+    FIXME
+    """
+
+    input_spec  = XfmConcatInputSpec
+    output_spec = XfmConcatOutputSpec
+    _cmd = 'xfmconcat'
+
+    def _gen_filename(self, name):
+        if name == 'output_file':
+            output_file = self.inputs.output_file
+
+            if isdefined(output_file):
+                return os.path.abspath(output_file)
+            else:
+                return aggregate_filename(self.inputs.input_files, 'xfmconcat_output') + '.xfm'
+        else:
+            raise NotImplemented
+
+    def _gen_outfilename(self):
+        return self._gen_filename('output_file')
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_file'] = os.path.abspath(self._gen_outfilename())
+        return outputs
+
