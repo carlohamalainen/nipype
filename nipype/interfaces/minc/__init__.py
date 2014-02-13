@@ -12,4 +12,4 @@ from .utils import (ToRaw, Convert, Copy,
                     Calc, Extract, Blob,
                     Blur, Math, Resample, Norm,
                     Volcentre, Volpad, Voliso, Gennlxfm,
-                    XfmConcat)
+                    XfmConcat, BestLinReg, NlpFit)

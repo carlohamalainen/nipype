@@ -2494,3 +2494,160 @@ class XfmConcat(CommandLine):
         outputs['output_file'] = os.path.abspath(self._gen_outfilename())
         return outputs
 
+class BestLinRegInputSpec(CommandLineInputSpec):
+    source = File(
+                    desc='source Minc file',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-4,)
+
+    target = File(
+                    desc='target Minc file',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-3,)
+
+    output_xfm  = File(
+                    desc='output xfm file',
+                    genfile=True,
+                    argstr='%s',
+                    position=-2,)
+
+    output_mnc  = File(
+                    desc='output mnc file',
+                    genfile=True,
+                    argstr='%s',
+                    position=-1,)
+
+    verbose = traits.Bool(desc='Print out log messages. Default: False.', argstr='-verbose')
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
+
+    # FIXME Very bare implementation, none of these are done yet:
+    """
+    -init_xfm     initial transformation (default identity)
+    -source_mask  source mask to use during fitting
+    -target_mask  target mask to use during fitting
+    -lsq9         use 9-parameter transformation (default)
+    -lsq12        use 12-parameter transformation (default -lsq9)
+    -lsq6         use 6-parameter transformation
+    """
+
+class BestLinRegOutputSpec(TraitedSpec):
+    output_xfm = File(desc='output xfm file', exists=True)
+    output_mnc = File(desc='output mnc file', exists=True)
+
+class BestLinReg(CommandLine):
+    """Hierachial linear fitting between two files.
+
+    Examples
+    --------
+
+    FIXME
+    """
+
+    input_spec  = BestLinRegInputSpec
+    output_spec = BestLinRegOutputSpec
+    _cmd = 'bestlinreg'
+
+    def _gen_filename(self, name):
+        if name == 'output_mnc':
+            output_mnc = self.inputs.output_mnc
+
+            if isdefined(output_mnc):
+                return os.path.abspath(output_mnc)
+            else:
+                return aggregate_filename([self.inputs.source, self.inputs.target], 'bestlinreg_output')
+        elif name == 'output_xfm':
+            return self._gen_filename('output_mnc') + 'output_xfm.xfm' # FIXME, tidy up
+        else:
+            raise NotImplemented
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_mnc'] = os.path.abspath(self._gen_filename('output_mnc'))
+        outputs['output_xfm'] = os.path.abspath(self._gen_filename('output_xfm'))
+        return outputs
+
+
+
+"""
+"$isomodel_base.mnc", $fitfiles[$f], $modxfm[$f]);
+"""
+
+
+class NlpFitInputSpec(CommandLineInputSpec):
+    source = File(
+                    desc='source Minc file',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-3,)
+
+    target = File(
+                    desc='target Minc file',
+                    exists=True,
+                    mandatory=True,
+                    argstr='%s',
+                    position=-2,)
+
+    output_file  = File(
+                    desc='output file',
+                    genfile=True,
+                    argstr='%s',
+                    position=-1,)
+
+    config_file = File(
+                    desc='File containing the fitting configuration use.',
+                    argstr='%s',
+                    exists=True)
+
+    init_xfm = File(
+                    desc='Initial transformation (default identity).',
+                    argstr='-init_xfm %s',
+                    exists=True)
+
+    source_mask = File(
+                    desc='Source mask to use during fitting.',
+                    argstr='-source_mask %s',
+                    exists=True)
+
+    verbose = traits.Bool(desc='Print out log messages. Default: False.', argstr='-verbose')
+    clobber = traits.Bool(desc='Overwrite existing file.', argstr='-clobber', usedefault=True, default_value=True)
+
+    # FIXME Very bare implementation, many parameters not done yet.
+
+class NlpFitOutputSpec(TraitedSpec):
+    output_xfm = File(desc='output xfm file', exists=True)
+    # output_mnc = File(desc='output mnc file', exists=True)
+    # FIXME nlpfit has two modes... deal with output.xfm vs output.mnc
+
+class NlpFit(CommandLine):
+    """
+    FIXME
+    """
+
+    input_spec  = NlpFitInputSpec
+    output_spec = NlpFitOutputSpec
+    _cmd = 'nlpfit'
+
+    def _gen_filename(self, name):
+        if name == 'output_xfm':
+            output_xfm = self.inputs.output_xfm
+
+            if isdefined(output_xfm):
+                return os.path.abspath(output_xfm)
+            else:
+                return aggregate_filename([self.inputs.source, self.inputs.target], 'nlpfit_xfm_output')
+        else:
+            raise NotImplemented
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['output_mnc'] = os.path.abspath(self._gen_filename('output_mnc'))
+        # FIXME see above.
+        # outputs['output_xfm'] = os.path.abspath(self._gen_filename('output_xfm'))
+        return outputs
+
+
